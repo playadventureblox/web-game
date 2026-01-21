@@ -205,7 +205,7 @@ const ConnectPage = () => {
         } else if (activeTab === "Requests") {
           const response = await friendsApi.getFriendRequests();
           if (response.success && response.data) {
-            // Show BOTH mock and real requests together
+            // Show ONLY real requests (no mock data)
             // Normalize API data to match mock data format
             const realRequests = (response.data.received || []).map((req: any) => ({
               id: req.sender_id,
@@ -216,10 +216,10 @@ const ConnectPage = () => {
               statusType: "offline",
               avatar: req.sender_avatar_url || `https://robohash.org/${req.sender_username}?set=set3`,
             }));
-            setReceivedRequests([...mockRequests, ...realRequests]);
+            setReceivedRequests(realRequests);
             setSentRequests(response.data.sent || []);
           } else {
-            setReceivedRequests(mockRequests);
+            setReceivedRequests([]);
           }
         }
       } catch (error) {
@@ -257,7 +257,7 @@ const ConnectPage = () => {
             statusType: "offline",
             avatar: req.sender_avatar_url || `https://robohash.org/${req.sender_username}?set=set3`,
           }));
-          setReceivedRequests([...mockRequests, ...realRequests]);
+          setReceivedRequests(realRequests);
         }
         
         // Update friends
@@ -296,7 +296,7 @@ const ConnectPage = () => {
             statusType: "offline",
             avatar: req.sender_avatar_url || `https://robohash.org/${req.sender_username}?set=set3`,
           }));
-          setReceivedRequests([...mockRequests, ...realRequests]);
+          setReceivedRequests(realRequests);
         }
       }
     } catch (error) {
@@ -313,7 +313,7 @@ const ConnectPage = () => {
       case "Followers":
         return followers;
       case "Requests":
-        return receivedRequests.length > 0 ? receivedRequests : mockRequests;
+        return receivedRequests;
       default:
         return friends.length > 0 ? friends : mockConnections;
     }

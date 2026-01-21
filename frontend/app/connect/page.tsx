@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { Search, HelpCircle, MoreHorizontal, Check, X } from "lucide-react";
+import { Search, HelpCircle, MoreHorizontal } from "lucide-react";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
-import { friendsApi } from "@/lib/api";
 
 const ConnectPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -14,10 +13,6 @@ const ConnectPage = () => {
   const [activeTab, setActiveTab] = useState("Friends");
   const [connectionSearch, setConnectionSearch] = useState("");
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
-  const [friends, setFriends] = useState<any[]>([]);
-  const [receivedRequests, setReceivedRequests] = useState<any[]>([]);
-  const [sentRequests, setSentRequests] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
   // Mock friends data
   const connections = [
@@ -176,152 +171,21 @@ const ConnectPage = () => {
     },
   ];
 
-  // Mock friends data for demonstration
-  const mockConnections = [
-    {
-      id: 1,
-      name: "nass4",
-      username: "accamellow",
-      status: "Playing",
-      statusType: "online-game",
-      display_name: "nass4",
-      avatar: "https://robohash.org/nass4?set=set3",
-    },
-    {
-      id: 2,
-      name: "pcobilaa",
-      username: "labilaa02",
-      status: "Online",
-      statusType: "online",
-      display_name: "pcobilaa",
-      avatar: "https://robohash.org/pcobilaa?set=set3",
-    },
-    {
-      id: 3,
-      name: "JayJayElmi",
-      username: "JayJayElmi",
-      status: "In Studio",
-      statusType: "studio",
-      display_name: "JayJayElmi",
-      avatar: "https://robohash.org/jayjay?set=set3",
-    },
-    {
-      id: 4,
-      name: "intann_bil",
-      username: "intann_bil",
-      status: "Offline",
-      statusType: "offline",
-      display_name: "intann_bil",
-      avatar: "https://robohash.org/intann?set=set3",
-    },
-  ];
-
-  const mockRequests = [
-    {
-      id: 1,
-      name: "NewUser1",
-      username: "newuser1",
-      status: "Offline",
-      statusType: "offline",
-      sender_display_name: "NewUser1",
-      sender_username: "newuser1",
-      avatar: "https://robohash.org/new1?set=set3",
-    },
-    {
-      id: 2,
-      name: "NewUser2",
-      username: "newuser2",
-      status: "Online",
-      statusType: "online",
-      sender_display_name: "NewUser2",
-      sender_username: "newuser2",
-      avatar: "https://robohash.org/new2?set=set3",
-    },
-  ];
-
-  const tabs = ["Friends", "Requests"];
-
-  // Fetch friends and requests
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        if (activeTab === "Friends") {
-          const response = await friendsApi.getFriends();
-          if (response.success && response.data) {
-            // Use API data if available, otherwise show mock data
-            setFriends(response.data.friends && response.data.friends.length > 0 ? response.data.friends : mockConnections);
-          } else {
-            // Fallback to mock data
-            setFriends(mockConnections);
-          }
-        } else if (activeTab === "Requests") {
-          const response = await friendsApi.getFriendRequests();
-          if (response.success && response.data) {
-            // Show real requests, and add mock data if empty for demonstration
-            const realRequests = response.data.received || [];
-            setReceivedRequests(realRequests.length > 0 ? realRequests : mockRequests);
-            setSentRequests(response.data.sent || []);
-          } else {
-            // Fallback to mock data
-            setReceivedRequests(mockRequests);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        // On error, show mock data for demonstration
-        if (activeTab === "Friends") {
-          setFriends(mockConnections);
-        } else {
-          setReceivedRequests(mockRequests);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [activeTab]);
-
-  const handleAcceptRequest = async (requestId: string) => {
-    try {
-      const response = await friendsApi.acceptFriendRequest(requestId);
-      if (response.success) {
-        // Remove from received requests
-        setReceivedRequests((prev) => prev.filter((r) => r.id !== requestId));
-        alert("Friend request accepted!");
-      } else {
-        alert(response.message || "Failed to accept request");
-      }
-    } catch (error) {
-      console.error("Accept request error:", error);
-      alert("Failed to accept request");
-    }
-  };
-
-  const handleDeclineRequest = async (requestId: string) => {
-    try {
-      const response = await friendsApi.declineFriendRequest(requestId);
-      if (response.success) {
-        // Remove from received requests
-        setReceivedRequests((prev) => prev.filter((r) => r.id !== requestId));
-        alert("Friend request declined");
-      } else {
-        alert(response.message || "Failed to decline request");
-      }
-    } catch (error) {
-      console.error("Decline request error:", error);
-      alert("Failed to decline request");
-    }
-  };
+  const tabs = ["Friends", "Following", "Followers", "Requests"];
 
   const getCurrentData = () => {
-    if (activeTab === "Friends") {
-      return friends;
-    } else if (activeTab === "Requests") {
-      return receivedRequests;
+    switch (activeTab) {
+      case "Friends":
+        return connections;
+      case "Following":
+        return following;
+      case "Followers":
+        return followers;
+      case "Requests":
+        return requests;
+      default:
+        return connections;
     }
-    return [];
   };
 
   const currentData = getCurrentData();
@@ -429,10 +293,11 @@ const ConnectPage = () => {
 
               <div className="flex flex-col items-center text-center">
                 <div className="relative w-24 h-24 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 mb-3">
-                  {/* Avatar - show generated or placeholder */}
-                  <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-3xl font-bold">
-                    {(user.sender_display_name || user.display_name || user.name || "U").charAt(0).toUpperCase()}
-                  </div>
+                  <img
+                    src={user.avatar}
+                    alt={user.name}
+                    className="w-full h-full object-cover"
+                  />
                   {/* Status Dot */}
                   {user.statusType && user.statusType !== "offline" && (
                     <div
@@ -464,11 +329,11 @@ const ConnectPage = () => {
                     }`}
                   />
                   <h3 className="font-bold text-gray-900 dark:text-gray-100">
-                    {user.sender_display_name || user.display_name || user.name || "User"}
+                    {user.name}
                   </h3>
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                  @{user.sender_username || user.username || "username"}
+                  {user.username}
                 </p>
                 <p
                   className={`text-sm font-medium ${
@@ -481,23 +346,17 @@ const ConnectPage = () => {
                           : "text-gray-500 dark:text-gray-400"
                   }`}
                 >
-                  {user.status || (activeTab === "Requests" ? "Sent you a friend request" : "Offline")}
+                  {user.status}
                 </p>
 
                 {/* Action buttons only for Requests */}
                 {activeTab === "Requests" && (
                   <div className="flex gap-2 mt-4 w-full">
-                    <button 
-                      onClick={() => handleDeclineRequest(user.id)}
-                      className="flex-1 px-4 py-2 bg-red-100 dark:bg-red-900 hover:bg-red-200 dark:hover:bg-red-800 text-red-900 dark:text-red-100 text-sm font-medium rounded transition-colors flex items-center justify-center gap-2"
-                    >
-                      <X className="w-4 h-4" /> Decline
+                    <button className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 text-sm font-medium rounded transition-colors">
+                      Ignore
                     </button>
-                    <button 
-                      onClick={() => handleAcceptRequest(user.id)}
-                      className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded transition-colors flex items-center justify-center gap-2"
-                    >
-                      <Check className="w-4 h-4" /> Accept
+                    <button className="flex-1 px-4 py-2 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 text-sm font-medium rounded transition-colors">
+                      Accept
                     </button>
                   </div>
                 )}

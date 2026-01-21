@@ -353,11 +353,13 @@ export const getFriends = async (req: AuthRequest, res: Response) => {
         u."displayName" as display_name,
         u."isVerified" as is_verified,
         u."lastLogin" as last_login,
-        u."onlineStatus" as online_status,
+        p."avatarUrl" as avatar_url,
+        p."presenceStatus" as presence_status,
         bf.id as is_best_friend,
         f."createdAt" as friends_since
        FROM friendships f
        JOIN users u ON f."friendId" = u.id
+       LEFT JOIN profiles p ON u.id = p."userId"
        LEFT JOIN best_friends bf ON bf."userId" = $1 AND bf."friendId" = u.id
        WHERE f."userId" = $1
        ORDER BY 

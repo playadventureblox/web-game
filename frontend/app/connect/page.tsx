@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, HelpCircle, MoreHorizontal } from "lucide-react";
+import { Search, HelpCircle, MoreHorizontal, Check, X } from "lucide-react";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
+import { friendsApi } from "@/lib/api";
 
 const ConnectPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -13,9 +14,15 @@ const ConnectPage = () => {
   const [activeTab, setActiveTab] = useState("Friends");
   const [connectionSearch, setConnectionSearch] = useState("");
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Mock friends data
-  const connections = [
+  // State for real API data
+  const [friends, setFriends] = useState<any[]>([]);
+  const [receivedRequests, setReceivedRequests] = useState<any[]>([]);
+  const [sentRequests, setSentRequests] = useState<any[]>([]);
+
+  // Mock friends data for demonstration
+  const mockConnections = [
     {
       id: 1,
       name: "nass4",
@@ -144,7 +151,7 @@ const ConnectPage = () => {
     },
   ];
 
-  const requests = [
+  const mockRequests = [
     {
       id: 1,
       name: "NewUser1",
@@ -173,18 +180,142 @@ const ConnectPage = () => {
 
   const tabs = ["Friends", "Following", "Followers", "Requests"];
 
+  // Fetch data when tab changes
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        if (activeTab === "Friends") {
+          const response = await friendsApi.getFriends();
+          if (response.success && response.data) {
+            // Show BOTH mock and real data together
+            // Normalize API data to match mock data format
+            const realFriends = (response.data.friends || []).map((friend: any) => ({
+              id: friend.id,
+              name: friend.display_name || friend.username,
+              username: `@${friend.username}`,
+              status: "Offline",
+              statusType: "offline",
+              avatar: friend.avatar_url || `https://robohash.org/${friend.username}?set=set3`,
+            }));
+            setFriends([...mockConnections, ...realFriends]);
+          } else {
+            setFriends(mockConnections);
+          }
+        } else if (activeTab === "Requests") {
+          const response = await friendsApi.getFriendRequests();
+          if (response.success && response.data) {
+            // Show BOTH mock and real requests together
+            // Normalize API data to match mock data format
+            const realRequests = (response.data.received || []).map((req: any) => ({
+              id: req.sender_id,
+              request_id: req.request_id,
+              name: req.sender_display_name || req.sender_username,
+              username: `@${req.sender_username}`,
+              status: "Offline",
+              statusType: "offline",
+              avatar: req.sender_avatar_url || `https://robohash.org/${req.sender_username}?set=set3`,
+            }));
+            setReceivedRequests([...mockRequests, ...realRequests]);
+            setSentRequests(response.data.sent || []);
+          } else {
+            setReceivedRequests(mockRequests);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        // Fallback to mock data
+        if (activeTab === "Friends") setFriends(mockConnections);
+        if (activeTab === "Requests") setReceivedRequests(mockRequests);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [activeTab]);
+
+  // Handle accept friend request
+  const handleAcceptRequest = async (requestId: string) => {
+    try {
+      const response = await friendsApi.acceptFriendRequest(requestId);
+      if (response.success) {
+        // Refresh both requests AND friends list
+        const [requestsResponse, friendsResponse] = await Promise.all([
+          friendsApi.getFriendRequests(),
+          friendsApi.getFriends()
+        ]);
+        
+        // Update requests
+        if (requestsResponse.success && requestsResponse.data) {
+          const realRequests = (requestsResponse.data.received || []).map((req: any) => ({
+            id: req.sender_id,
+            request_id: req.request_id,
+            name: req.sender_display_name || req.sender_username,
+            username: `@${req.sender_username}`,
+            status: "Offline",
+            statusType: "offline",
+            avatar: req.sender_avatar_url || `https://robohash.org/${req.sender_username}?set=set3`,
+          }));
+          setReceivedRequests([...mockRequests, ...realRequests]);
+        }
+        
+        // Update friends
+        if (friendsResponse.success && friendsResponse.data) {
+          const realFriends = (friendsResponse.data.friends || []).map((friend: any) => ({
+            id: friend.id,
+            name: friend.display_name || friend.username,
+            username: `@${friend.username}`,
+            status: "Offline",
+            statusType: "offline",
+            avatar: friend.avatar_url || `https://robohash.org/${friend.username}?set=set3`,
+          }));
+          setFriends([...mockConnections, ...realFriends]);
+        }
+      }
+    } catch (error) {
+      console.error("Error accepting request:", error);
+    }
+  };
+
+  // Handle decline friend request
+  const handleDeclineRequest = async (requestId: string) => {
+    try {
+      const response = await friendsApi.declineFriendRequest(requestId);
+      if (response.success) {
+        // Refresh requests
+        const requestsResponse = await friendsApi.getFriendRequests();
+        if (requestsResponse.success && requestsResponse.data) {
+          // Normalize API data
+          const realRequests = (requestsResponse.data.received || []).map((req: any) => ({
+            id: req.sender_id,
+            request_id: req.request_id,
+            name: req.sender_display_name || req.sender_username,
+            username: `@${req.sender_username}`,
+            status: "Offline",
+            statusType: "offline",
+            avatar: req.sender_avatar_url || `https://robohash.org/${req.sender_username}?set=set3`,
+          }));
+          setReceivedRequests([...mockRequests, ...realRequests]);
+        }
+      }
+    } catch (error) {
+      console.error("Error declining request:", error);
+    }
+  };
+
   const getCurrentData = () => {
     switch (activeTab) {
       case "Friends":
-        return connections;
+        return friends.length > 0 ? friends : mockConnections;
       case "Following":
         return following;
       case "Followers":
         return followers;
       case "Requests":
-        return requests;
+        return receivedRequests.length > 0 ? receivedRequests : mockRequests;
       default:
-        return connections;
+        return friends.length > 0 ? friends : mockConnections;
     }
   };
 
@@ -352,11 +483,17 @@ const ConnectPage = () => {
                 {/* Action buttons only for Requests */}
                 {activeTab === "Requests" && (
                   <div className="flex gap-2 mt-4 w-full">
-                    <button className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 text-sm font-medium rounded transition-colors">
-                      Ignore
+                    <button 
+                      onClick={() => user.request_id && handleDeclineRequest(user.request_id)}
+                      className="flex-1 p-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded transition-colors flex items-center justify-center"
+                    >
+                      <X className="w-5 h-5" />
                     </button>
-                    <button className="flex-1 px-4 py-2 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 text-sm font-medium rounded transition-colors">
-                      Accept
+                    <button 
+                      onClick={() => user.request_id && handleAcceptRequest(user.request_id)}
+                      className="flex-1 p-2 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded transition-colors flex items-center justify-center"
+                    >
+                      <Check className="w-5 h-5" />
                     </button>
                   </div>
                 )}

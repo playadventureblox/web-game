@@ -22,9 +22,13 @@ const app: Application = express();
 const httpServer = createServer(app);
 
 // Initialize Socket.IO
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : [process.env.FRONTEND_URL || "http://localhost:3000"];
+
 const io = new SocketIOServer(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -37,7 +41,7 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet()); // Security headers
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: allowedOrigins,
     credentials: true,
   }),
 );

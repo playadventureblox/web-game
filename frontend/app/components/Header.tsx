@@ -17,6 +17,14 @@ interface HeaderProps {
   isVerified?: boolean;
 }
 
+interface SearchResult {
+  id: string;
+  username: string;
+  display_name: string;
+  is_verified?: boolean;
+  friendship_status?: 'friend' | 'request_sent' | 'request_received' | 'none';
+}
+
 export default function Header({
   searchQuery,
   setSearchQuery,
@@ -25,6 +33,7 @@ export default function Header({
 }: HeaderProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [user, setUser] = useState<{
+    id?: string;
     username?: string;
     display_name?: string;
     is_verified?: boolean;
@@ -33,7 +42,7 @@ export default function Header({
   const [loading, setLoading] = useState(true);
   const [showSwitchAccountsModal, setShowSwitchAccountsModal] = useState(false);
   const [switchSuccess, setSwitchSuccess] = useState(false);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -90,7 +99,7 @@ useEffect(() => {
         try {
           const response = await searchApi.searchUsers(searchQuery, 8);
           if (response.success && response.data) {
-            setSearchResults(response.data.users || []);
+            setSearchResults((response.data.users as SearchResult[]) || []);
             setShowSearchDropdown(true);
           }
         } catch (error) {

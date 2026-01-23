@@ -661,7 +661,7 @@ const ProfilePage = () => {
                 />
               </div>
               {/* Status Badge - Dynamic based on presence */}
-              {!isOwnProfile && getPresenceStatus() && (
+              {getPresenceStatus() && (
                 <div
                   className={`absolute w-7 h-7 ${getPresenceStatus()?.color} rounded-full flex items-center justify-center border-2 border-white dark:border-gray-900`}
                   style={{ bottom: "-3.5px", right: "-3.5px" }}

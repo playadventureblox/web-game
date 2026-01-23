@@ -171,10 +171,10 @@ export const login = async (req: Request, res: Response) => {
     const ipAddress = req.ip || req.socket.remoteAddress || "";
     const deviceFingerprint = req.headers["user-agent"] || "";
 
-    // Update user login info
+    // Update user login info and set presence to online
     await db.query(
-      'UPDATE users SET "refreshToken" = $1, "lastLogin" = $2, "ipAddress" = $3, "deviceFingerprint" = $4 WHERE id = $5',
-      [refreshToken, new Date(), ipAddress, deviceFingerprint, user.id],
+      'UPDATE users SET "refreshToken" = $1, "lastLogin" = $2, "ipAddress" = $3, "deviceFingerprint" = $4, "presenceStatus" = $5, "lastOnline" = $6 WHERE id = $7',
+      [refreshToken, new Date(), ipAddress, deviceFingerprint, 'online', new Date(), user.id],
     );
 
     // Return success response
@@ -220,8 +220,10 @@ export const logout = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Clear refresh token
-    await db.query('UPDATE users SET "refreshToken" = NULL WHERE id = $1', [
+    // Clear refresh token and set presence to offline
+    await db.query('UPDATE users SET "refreshToken" = NULL, "presenceStatus" = $1, "lastOnline" = $2 WHERE id = $3', [
+      'offline',
+      new Date(),
       userId,
     ]);
 

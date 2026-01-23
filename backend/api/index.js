@@ -1,3 +1,3 @@
-const app = require("../dist/serverless").default;
+import app from "../dist/serverless.js";
 
-module.exports = app;
+export default app;

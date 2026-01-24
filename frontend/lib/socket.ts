@@ -15,7 +15,6 @@ export const initializeSocket = (): Socket | null => {
 
   const token = storage.getAccessToken();
   if (!token) {
-    console.warn('No auth token found, cannot initialize socket');
     return null;
   }
 
@@ -31,17 +30,15 @@ export const initializeSocket = (): Socket | null => {
   });
 
   socket.on('connect', () => {
-    console.log('✅ Socket.IO connected:', socket?.id);
     startHeartbeat();
   });
 
   socket.on('disconnect', (reason) => {
-    console.log('❌ Socket.IO disconnected:', reason);
     stopHeartbeat();
   });
 
   socket.on('connect_error', (error) => {
-    console.error('Socket.IO connection error:', error.message);
+    // Silent error handling for production
   });
 
   return socket;

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "./components/ThemeProvider";
+import { PresenceProvider } from "@/contexts/PresenceContext";
 
 export const metadata: Metadata = {
   title: "AdventureBlox",
@@ -21,7 +22,9 @@ export default function RootLayout({
           enableSystem={false}
           storageKey="adventureblox-theme"
         >
-          {children}
+          <PresenceProvider>
+            {children}
+          </PresenceProvider>
         </ThemeProvider>
       </body>
     </html>

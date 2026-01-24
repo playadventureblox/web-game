@@ -21,6 +21,7 @@ import Header from "../../components/Header";
 import VerifiedBadge from "../../components/VerifiedBadge";
 import { usersApi, friendsApi } from "@/lib/api";
 import { useParams } from "next/navigation";
+import { useUserPresence } from "@/hooks/useUserPresence";
 
 interface UserProfile {
   id?: string;
@@ -73,6 +74,9 @@ const ProfilePage = () => {
     isBlocked: boolean;
   } | null>(null);
   const [isLoadingAction, setIsLoadingAction] = useState(false);
+  
+  // Real-time presence for profile user
+  const realtimePresence = useUserPresence(profileUser?.id);
 
   // Fetch data from API
   useEffect(() => {
@@ -480,9 +484,12 @@ const ProfilePage = () => {
     return formatDate(dateString);
   };
 
-  // Get presence status badge
+  // Get presence status badge - uses real-time data if available
   const getPresenceStatus = (): { color: string; hasIcon: boolean; label: string } | null => {
-    const status = profileUser?.presence_status || 'offline';
+    // Use real-time presence if available, otherwise fall back to initial profile data
+    const status = realtimePresence?.presenceStatus || profileUser?.presence_status || 'offline';
+    const currentGame = realtimePresence?.currentGame || profileUser?.current_game;
+    
     if (status === 'online') {
       return {
         color: 'bg-blue-500',
@@ -493,7 +500,7 @@ const ProfilePage = () => {
       return {
         color: 'bg-green-500',
         hasIcon: true,
-        label: profileUser?.current_game ? `Playing ${profileUser.current_game}` : 'In Game'
+        label: currentGame ? `Playing ${currentGame}` : 'In Game'
       };
     }
     return null; // offline - no badge
@@ -1524,9 +1531,10 @@ const ProfilePage = () => {
                       Last Online
                     </p>
                     <p className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                      {profileUser?.presence_status === 'online' || profileUser?.presence_status === 'in-game' 
+                      {(realtimePresence?.presenceStatus === 'online' || realtimePresence?.presenceStatus === 'in-game') || 
+                       (profileUser?.presence_status === 'online' || profileUser?.presence_status === 'in-game')
                         ? 'Now' 
-                        : formatLastOnline(profileUser?.last_online)}
+                        : formatLastOnline(realtimePresence?.lastOnline || profileUser?.last_online)}
                     </p>
                   </div>
                   <div className="text-center flex-1">

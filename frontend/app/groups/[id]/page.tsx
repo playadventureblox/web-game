@@ -344,7 +344,7 @@ const GroupDetailPage = () => {
       {/* Main Layout */}
       <div className="flex w-full gap-6 px-6 py-6">
         {/* Left Sidebar - 25% width, no borders/padding/inner sections */}
-        <div className="w-1/4 flex-shrink-0">
+        <div className="w-1/4 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 pr-6">
           {/* Groups List - Clean, no containers */}
           <div className="space-y-1">
             <div className="flex items-center justify-between mb-3">
@@ -376,11 +376,7 @@ const GroupDetailPage = () => {
                 </Link>
               </div>
             ) : (
-              userGroups
-                .filter((group) =>
-                  group.name.toLowerCase().includes(groupSearch.toLowerCase()),
-                )
-                .map((group) => (
+              userGroups.map((group) => (
                   <Link
                     key={group.id}
                     href={`/groups/${group.id}`}

@@ -206,14 +206,37 @@ export default function Sidebar({
                 <span className="font-medium text-sm">Trade</span>
               </Link>
 
-              <Link
-                href="/groups"
-                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-                onClick={onClose}
+              <button
+                onClick={async () => {
+                  try {
+                    // Dynamically import to avoid circular dependencies
+                    const { groupsApi } = await import('@/lib/api');
+                    const { useRouter } = await import('next/navigation');
+                    
+                    const response = await groupsApi.getUserGroups();
+                    if (response.success && response.data) {
+                      const groups = response.data.groups as any[];
+                      if (groups.length > 0) {
+                        // Navigate to first group
+                        window.location.href = `/groups/${groups[0].id}`;
+                      } else {
+                        // No groups, go to discovery
+                        window.location.href = '/groups';
+                      }
+                    } else {
+                      window.location.href = '/groups';
+                    }
+                  } catch (error) {
+                    console.error('Error navigating to groups:', error);
+                    window.location.href = '/groups';
+                  }
+                  onClose();
+                }}
+                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 w-full text-left"
               >
                 <Users className="w-4 h-4" />
                 <span className="font-medium text-sm">Groups</span>
-              </Link>
+              </button>
             </nav>
 
             {/* Create Community Button */}

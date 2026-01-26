@@ -100,16 +100,22 @@ const ConfigureGroupPage = () => {
   const [openMemberMenu, setOpenMemberMenu] = useState<string | null>(null);
 
   // Roles states
-  const [selectedRole, setSelectedRole] = useState<string | null>("Owner");
+  const [roles, setRoles] = useState<any[]>([]);
+  const [loadingRoles, setLoadingRoles] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<any | null>(null);
+  const [isCreatingRole, setIsCreatingRole] = useState(false);
+  const [roleName, setRoleName] = useState("");
+  const [roleDescription, setRoleDescription] = useState("");
+  const [roleRank, setRoleRank] = useState(0);
   const [rolePermissions, setRolePermissions] = useState({
     viewWall: true,
     postWall: true,
-    deleteWallPosts: true,
+    deleteWallPosts: false,
     viewShout: true,
-    createAnnouncements: true,
+    createAnnouncements: false,
     manageMembers: false,
     deleteMembers: false,
-    createInvites: true,
+    createInvites: false,
     viewAuditLog: false,
     spendGroupFunds: false,
     advertiseGroup: false,
@@ -238,6 +244,49 @@ const ConfigureGroupPage = () => {
 
     fetchGroupData();
   }, [groupId]);
+
+  // Fetch roles when Roles section is active
+  useEffect(() => {
+    const fetchRoles = async () => {
+      if (!groupId || activeSection !== "Roles") return;
+      setLoadingRoles(true);
+      try {
+        const response = await groupsApi.getGroupRoles(groupId);
+        if (response.success && response.data) {
+          setRoles((response.data.roles as any[]) || []);
+          // Select first role by default if available
+          if (response.data.roles && response.data.roles.length > 0) {
+            const firstRole = response.data.roles[0] as any;
+            setSelectedRole(firstRole);
+            setRoleName(firstRole.name || "");
+            setRoleDescription(firstRole.description || "");
+            setRoleRank(firstRole.rank || 0);
+            setRolePermissions({
+              viewWall: firstRole.can_view_wall !== false,
+              postWall: firstRole.can_post_on_wall !== false,
+              deleteWallPosts: firstRole.can_delete_wall_posts || false,
+              viewShout: firstRole.can_view_shout !== false,
+              createAnnouncements: firstRole.can_post_shout || false,
+              manageMembers: firstRole.can_manage_members || false,
+              deleteMembers: firstRole.can_delete_members || false,
+              createInvites: firstRole.can_create_invites || false,
+              viewAuditLog: firstRole.can_view_audit_logs || false,
+              spendGroupFunds: firstRole.can_spend_group_funds || false,
+              advertiseGroup: firstRole.can_advertise_group || false,
+              manageAlliances: firstRole.can_manage_alliances || false,
+              manageRoles: firstRole.can_manage_roles || false,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching roles:", error);
+      } finally {
+        setLoadingRoles(false);
+      }
+    };
+
+    fetchRoles();
+  }, [groupId, activeSection]);
 
   // Check if user is owner
   const isOwner = groupData?.role === "Owner";
@@ -457,6 +506,117 @@ const ConfigureGroupPage = () => {
       setSuccessMessage({
         title: "Error",
         message: "An error occurred while updating social links",
+      });
+      setShowSuccessModal(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Handle creating a new role
+  const handleCreateRole = () => {
+    setIsCreatingRole(true);
+    setSelectedRole(null);
+    setRoleName("");
+    setRoleDescription("");
+    setRoleRank(0);
+    setRolePermissions({
+      viewWall: true,
+      postWall: true,
+      deleteWallPosts: false,
+      viewShout: true,
+      createAnnouncements: false,
+      manageMembers: false,
+      deleteMembers: false,
+      createInvites: false,
+      viewAuditLog: false,
+      spendGroupFunds: false,
+      advertiseGroup: false,
+      manageAlliances: false,
+      manageRoles: false,
+    });
+  };
+
+  // Handle selecting an existing role
+  const handleSelectRole = (role: any) => {
+    setIsCreatingRole(false);
+    setSelectedRole(role);
+    setRoleName(role.name || "");
+    setRoleDescription(role.description || "");
+    setRoleRank(role.rank || 0);
+    setRolePermissions({
+      viewWall: role.can_view_wall !== false,
+      postWall: role.can_post_on_wall !== false,
+      deleteWallPosts: role.can_delete_wall_posts || false,
+      viewShout: role.can_view_shout !== false,
+      createAnnouncements: role.can_post_shout || false,
+      manageMembers: role.can_manage_members || false,
+      deleteMembers: role.can_delete_members || false,
+      createInvites: role.can_create_invites || false,
+      viewAuditLog: role.can_view_audit_logs || false,
+      spendGroupFunds: role.can_spend_group_funds || false,
+      advertiseGroup: role.can_advertise_group || false,
+      manageAlliances: role.can_manage_alliances || false,
+      manageRoles: role.can_manage_roles || false,
+    });
+  };
+
+  // Handle saving role (create or update)
+  const handleSaveRole = async () => {
+    if (!groupId || !roleName.trim()) return;
+
+    setSaving(true);
+    try {
+      const roleData = {
+        name: roleName,
+        description: roleDescription,
+        rank: roleRank,
+        canViewWall: rolePermissions.viewWall,
+        canPostOnWall: rolePermissions.postWall,
+        canDeleteWallPosts: rolePermissions.deleteWallPosts,
+        canViewShout: rolePermissions.viewShout,
+        canPostShout: rolePermissions.createAnnouncements,
+        canManageMembers: rolePermissions.manageMembers,
+        canDeleteMembers: rolePermissions.deleteMembers,
+        canCreateInvites: rolePermissions.createInvites,
+        canViewAuditLogs: rolePermissions.viewAuditLog,
+        canSpendGroupFunds: rolePermissions.spendGroupFunds,
+        canAdvertiseGroup: rolePermissions.advertiseGroup,
+        canManageAlliances: rolePermissions.manageAlliances,
+        canManageRoles: rolePermissions.manageRoles,
+      };
+
+      let response;
+      if (isCreatingRole) {
+        response = await groupsApi.createGroupRole(groupId, roleData);
+      } else if (selectedRole) {
+        response = await groupsApi.updateGroupRole(groupId, selectedRole.id, roleData);
+      }
+
+      if (response?.success) {
+        setSuccessMessage({
+          title: "Success",
+          message: isCreatingRole ? "Role created successfully!" : "Role updated successfully!",
+        });
+        setShowSuccessModal(true);
+        // Refresh roles
+        const rolesResponse = await groupsApi.getGroupRoles(groupId);
+        if (rolesResponse.success && rolesResponse.data) {
+          setRoles((rolesResponse.data.roles as any[]) || []);
+        }
+        setIsCreatingRole(false);
+      } else {
+        setSuccessMessage({
+          title: "Error",
+          message: response?.error || "Failed to save role",
+        });
+        setShowSuccessModal(true);
+      }
+    } catch (error) {
+      console.error("Error saving role:", error);
+      setSuccessMessage({
+        title: "Error",
+        message: "An error occurred while saving role",
       });
       setShowSuccessModal(true);
     } finally {
@@ -1569,23 +1729,43 @@ const ConfigureGroupPage = () => {
                     <div className="flex gap-6">
                       {/* Left: Role List */}
                       <div className="w-64 flex-shrink-0 space-y-2">
-                        {["Owner", "Admin", "Member", "Guest"].map((role) => (
-                          <button
-                            key={role}
-                            onClick={() => setSelectedRole(role)}
-                            className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
-                              selectedRole === role
-                                ? "bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                                : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                            }`}
-                          >
-                            <div className="font-semibold text-gray-900 dark:text-gray-100">
-                              {role}
-                            </div>
-                          </button>
-                        ))}
-                        <button className="w-full px-4 py-3 bg-white dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-900 dark:hover:text-gray-200 transition-colors">
-                          Create Role
+                        {loadingRoles ? (
+                          <div className="py-8 text-center">
+                            <Loader2 className="w-6 h-6 animate-spin text-blue-600 dark:text-blue-400 mx-auto" />
+                          </div>
+                        ) : roles.length === 0 ? (
+                          <div className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                            No roles yet
+                          </div>
+                        ) : (
+                          roles.map((role) => (
+                            <button
+                              key={role.id}
+                              onClick={() => handleSelectRole(role)}
+                              className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
+                                selectedRole?.id === role.id && !isCreatingRole
+                                  ? "bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                                  : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                              }`}
+                            >
+                              <div className="font-semibold text-gray-900 dark:text-gray-100">
+                                {role.name}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Rank: {role.rank}
+                              </div>
+                            </button>
+                          ))
+                        )}
+                        <button 
+                          onClick={handleCreateRole}
+                          className={`w-full px-4 py-3 bg-white dark:bg-gray-800 border-2 border-dashed rounded-lg transition-colors ${
+                            isCreatingRole
+                              ? "border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                              : "border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-900 dark:hover:text-gray-200"
+                          }`}
+                        >
+                          + Create Role
                         </button>
                       </div>
 
@@ -1598,12 +1778,14 @@ const ConfigureGroupPage = () => {
                           </label>
                           <input
                             type="text"
-                            value={selectedRole || ""}
-                            readOnly
-                            className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-gray-100"
+                            value={roleName}
+                            onChange={(e) => setRoleName(e.target.value)}
+                            maxLength={100}
+                            placeholder="Enter role name"
+                            className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                           <div className="text-right text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            5/100
+                            {roleName.length}/100
                           </div>
                         </div>
 
@@ -1614,11 +1796,14 @@ const ConfigureGroupPage = () => {
                           </label>
                           <textarea
                             rows={3}
-                            defaultValue="The community's owner."
-                            className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-gray-100 resize-none"
+                            value={roleDescription}
+                            onChange={(e) => setRoleDescription(e.target.value)}
+                            maxLength={1000}
+                            placeholder="Enter role description"
+                            className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-gray-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                           <div className="text-right text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            22/1000
+                            {roleDescription.length}/1000
                           </div>
                         </div>
 
@@ -1629,15 +1814,20 @@ const ConfigureGroupPage = () => {
                           </label>
                           <input
                             type="number"
-                            defaultValue="255"
+                            value={roleRank}
+                            onChange={(e) => setRoleRank(parseInt(e.target.value) || 0)}
                             min="0"
                             max="255"
-                            className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-gray-100"
+                            className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                         </div>
 
-                        <button className="px-6 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-600 font-medium">
-                          Save
+                        <button 
+                          onClick={handleSaveRole}
+                          disabled={!roleName.trim() || saving}
+                          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {saving ? "Saving..." : (isCreatingRole ? "Create Role" : "Save Changes")}
                         </button>
 
                         {/* Posts Section */}

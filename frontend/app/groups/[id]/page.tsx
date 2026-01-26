@@ -242,6 +242,44 @@ const GroupDetailPage = () => {
     }
   };
 
+  // Handle shout submission
+  const handleShoutSubmit = async () => {
+    if (!shoutText.trim() || !groupId) return;
+
+    try {
+      const response = await groupsApi.updateGroupShout(
+        groupId,
+        shoutText.trim(),
+      );
+      if (response.success) {
+        // Refresh group details to show new shout
+        const groupResponse = await groupsApi.getGroupById(groupId);
+        if (groupResponse.success && groupResponse.data) {
+          setCurrentGroupDetails(groupResponse.data.group as Group);
+        }
+        setShoutText("");
+        setSuccessMessage({
+          title: "Success",
+          message: "Shout posted successfully!",
+        });
+        setShowSuccessModal(true);
+      } else {
+        setSuccessMessage({
+          title: "Error",
+          message: response.error || "Failed to post shout",
+        });
+        setShowSuccessModal(true);
+      }
+    } catch (error) {
+      console.error("Error posting shout:", error);
+      setSuccessMessage({
+        title: "Error",
+        message: "Failed to post shout",
+      });
+      setShowSuccessModal(true);
+    }
+  };
+
   // Mock store items
   const storeItems = [
     {
@@ -720,42 +758,7 @@ const GroupDetailPage = () => {
                         className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                       <button
-                        onClick={async () => {
-                          if (shoutText.trim() && groupId) {
-                            try {
-                              const response = await groupsApi.updateGroupShout(
-                                groupId,
-                                shoutText.trim(),
-                              );
-                              if (response.success) {
-                                // Refresh group details to show new shout
-                                const groupResponse = await groupsApi.getGroupById(groupId);
-                                if (groupResponse.success && groupResponse.data) {
-                                  setCurrentGroupDetails(groupResponse.data.group as Group);
-                                }
-                                setShoutText("");
-                                setSuccessMessage({
-                                  title: "Success",
-                                  message: "Shout posted successfully!",
-                                });
-                                setShowSuccessModal(true);
-                              } else {
-                                setSuccessMessage({
-                                  title: "Error",
-                                  message: response.error || "Failed to post shout",
-                                });
-                                setShowSuccessModal(true);
-                              }
-                            } catch (error) {
-                              console.error("Error posting shout:", error);
-                              setSuccessMessage({
-                                title: "Error",
-                                message: "Failed to post shout",
-                              });
-                              setShowSuccessModal(true);
-                            }
-                          }
-                        }}
+                        onClick={handleShoutSubmit}
                         disabled={!shoutText.trim()}
                         className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >

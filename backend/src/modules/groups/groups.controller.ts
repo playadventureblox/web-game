@@ -85,108 +85,121 @@ export const createGroup = async (req: AuthRequest, res: Response) => {
 
     const group = groupResult.rows[0];
 
-    // Create default Owner role
-    const ownerRoleId = uuidv4();
-    await db.query(
-      `INSERT INTO group_roles (
-        id,
-        "groupId",
-        name,
-        rank,
-        description,
-        "canManageMembers",
-        "canManageRoles",
-        "canPostOnWall",
-        "canDeleteWallPosts",
-        "canPostShout",
-        "canManageStore",
-        "canManageGames",
-        "canViewAuditLogs",
-        "canManageAlliances",
-        "canManageAds",
-        "canSpendGroupFunds",
-        "canCreateInvites",
-        "canBanMembers"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
-      [
-        ownerRoleId,
-        group.id,
-        "Owner",
-        255,
-        "The group's owner with full permissions.",
-        true, // canManageMembers
-        true, // canManageRoles
-        true, // canPostOnWall
-        true, // canDeleteWallPosts
-        true, // canPostShout
-        true, // canManageStore
-        true, // canManageGames
-        true, // canViewAuditLogs
-        true, // canManageAlliances
-        true, // canManageAds
-        true, // canSpendGroupFunds
-        true, // canCreateInvites
-        true, // canBanMembers
-      ],
-    );
+    try {
+      // Create default Owner role
+      const ownerRoleId = uuidv4();
+      console.log("Creating Owner role for group:", group.id);
+      await db.query(
+        `INSERT INTO group_roles (
+          id,
+          "groupId",
+          name,
+          rank,
+          description,
+          "canManageMembers",
+          "canManageRoles",
+          "canPostOnWall",
+          "canDeleteWallPosts",
+          "canPostShout",
+          "canManageStore",
+          "canManageGames",
+          "canViewAuditLogs",
+          "canManageAlliances",
+          "canManageAds",
+          "canSpendGroupFunds",
+          "canCreateInvites",
+          "canBanMembers"
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+        [
+          ownerRoleId,
+          group.id,
+          "Owner",
+          255,
+          "The group's owner with full permissions.",
+          true, // canManageMembers
+          true, // canManageRoles
+          true, // canPostOnWall
+          true, // canDeleteWallPosts
+          true, // canPostShout
+          true, // canManageStore
+          true, // canManageGames
+          true, // canViewAuditLogs
+          true, // canManageAlliances
+          true, // canManageAds
+          true, // canSpendGroupFunds
+          true, // canCreateInvites
+          true, // canBanMembers
+        ],
+      );
+      console.log("Owner role created successfully");
 
-    // Create default Member role
-    const memberRoleId = uuidv4();
-    await db.query(
-      `INSERT INTO group_roles (
-        id,
-        "groupId",
-        name,
-        rank,
-        description,
-        "canManageMembers",
-        "canManageRoles",
-        "canPostOnWall",
-        "canDeleteWallPosts",
-        "canPostShout",
-        "canManageStore",
-        "canManageGames",
-        "canViewAuditLogs",
-        "canManageAlliances",
-        "canManageAds",
-        "canSpendGroupFunds",
-        "canCreateInvites",
-        "canBanMembers"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
-      [
-        memberRoleId,
-        group.id,
-        "Member",
-        0,
-        "Default member role with basic permissions.",
-        false, // canManageMembers
-        false, // canManageRoles
-        true,  // canPostOnWall
-        false, // canDeleteWallPosts
-        false, // canPostShout
-        false, // canManageStore
-        false, // canManageGames
-        false, // canViewAuditLogs
-        false, // canManageAlliances
-        false, // canManageAds
-        false, // canSpendGroupFunds
-        true,  // canCreateInvites
-        false, // canBanMembers
-      ],
-    );
+      // Create default Member role
+      const memberRoleId = uuidv4();
+      console.log("Creating Member role for group:", group.id);
+      await db.query(
+        `INSERT INTO group_roles (
+          id,
+          "groupId",
+          name,
+          rank,
+          description,
+          "canManageMembers",
+          "canManageRoles",
+          "canPostOnWall",
+          "canDeleteWallPosts",
+          "canPostShout",
+          "canManageStore",
+          "canManageGames",
+          "canViewAuditLogs",
+          "canManageAlliances",
+          "canManageAds",
+          "canSpendGroupFunds",
+          "canCreateInvites",
+          "canBanMembers"
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+        [
+          memberRoleId,
+          group.id,
+          "Member",
+          0,
+          "Default member role with basic permissions.",
+          false, // canManageMembers
+          false, // canManageRoles
+          true,  // canPostOnWall
+          false, // canDeleteWallPosts
+          false, // canPostShout
+          false, // canManageStore
+          false, // canManageGames
+          false, // canViewAuditLogs
+          false, // canManageAlliances
+          false, // canManageAds
+          false, // canSpendGroupFunds
+          true,  // canCreateInvites
+          false, // canBanMembers
+        ],
+      );
+      console.log("Member role created successfully");
 
-    // Add creator as owner in group_members with Owner role
-    const memberId = uuidv4();
-    await db.query(
-      `INSERT INTO group_members (
-        id,
-        "groupId",
-        "userId",
-        "roleId",
-        "joinedAt"
-      ) VALUES ($1, $2, $3, $4, NOW())`,
-      [memberId, group.id, userId, ownerRoleId],
-    );
+      // Add creator as owner in group_members with Owner role
+      const memberId = uuidv4();
+      console.log("Adding creator to group_members with Owner role");
+      await db.query(
+        `INSERT INTO group_members (
+          id,
+          "groupId",
+          "userId",
+          "roleId",
+          "joinedAt"
+        ) VALUES ($1, $2, $3, $4, NOW())`,
+        [memberId, group.id, userId, ownerRoleId],
+      );
+      console.log("Creator added to group successfully");
+    } catch (roleError: any) {
+      console.error("Error creating roles or adding member:", roleError);
+      // Rollback: delete the group since role creation failed
+      await db.query(`DELETE FROM groups WHERE id = $1`, [group.id]);
+      throw new Error(`Failed to create default roles: ${roleError?.message || roleError}`);
+    }
 
     return res.status(201).json({
       success: true,

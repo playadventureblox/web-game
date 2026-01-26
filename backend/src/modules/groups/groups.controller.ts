@@ -208,12 +208,13 @@ export const createGroup = async (req: AuthRequest, res: Response) => {
         group,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Create group error:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
-      error: process.env.NODE_ENV === "development" ? error : undefined,
+      error: error?.message || String(error),
+      details: process.env.NODE_ENV === "development" ? error : undefined,
     });
   }
 };

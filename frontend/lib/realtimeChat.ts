@@ -18,20 +18,26 @@ export const subscribeToMessages = (
   currentUserId: string,
   onMessage: (msg: ChatMessage) => void,
 ) => {
-  const subscription = supabase
-    .from('messages')
-    .on('INSERT', (payload: any) => {
-      const row = payload?.new as ChatMessage;
-      if (!row) return;
-      if (row.receiver_id === currentUserId || row.sender_id === currentUserId) {
-        onMessage(row);
+  const channel = supabase
+    .channel('messages-channel')
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+      },
+      (payload: any) => {
+        const row = payload?.new as ChatMessage;
+        if (!row) return;
+        if (row.receiver_id === currentUserId || row.sender_id === currentUserId) {
+          onMessage(row);
+        }
       }
-    })
+    )
     .subscribe();
 
   return () => {
-    if (subscription && typeof subscription.unsubscribe === 'function') {
-      subscription.unsubscribe();
-    }
+    supabase.removeChannel(channel);
   };
 };

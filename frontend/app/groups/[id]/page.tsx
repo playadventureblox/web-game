@@ -653,12 +653,12 @@ const GroupDetailPage = () => {
 
           {/* Tabs */}
           {/* Tab Navigation */}
-          <div className="flex gap-2 px-6 border-b border-gray-100 dark:border-gray-800">
+          <div className="flex px-6 border-b border-gray-100 dark:border-gray-800">
             {tabs.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-3 text-sm font-semibold transition-colors relative ${
+                className={`flex-1 py-3 text-sm font-semibold transition-colors relative ${
                   activeTab === tab
                     ? "text-gray-900 dark:text-gray-100"
                     : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"

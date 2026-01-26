@@ -1802,7 +1802,7 @@ const ConfigureGroupPage = () => {
                           />
                         </div>
 
-                        {/* Posts Section */
+                        {/* Posts Section */}
                         <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
                           <button 
                             onClick={() => setPermissionSectionsCollapsed(prev => ({ ...prev, posts: !prev.posts }))}
@@ -1877,50 +1877,50 @@ const ConfigureGroupPage = () => {
                             </span>
                           </button>
                           {!permissionSectionsCollapsed.members && (
-                          <div className="p-5 space-y-4 bg-gray-50 dark:bg-gray-800">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-700 dark:text-gray-100">
-                                Manage members
-                              </span>
-                              <ToggleSwitch
-                                enabled={rolePermissions.manageMembers}
-                                onChange={(val) =>
-                                  setRolePermissions({
-                                    ...rolePermissions,
-                                    manageMembers: val,
-                                  })
-                                }
-                              />
+                            <div className="p-5 space-y-4 bg-gray-50 dark:bg-gray-800">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-700 dark:text-gray-100">
+                                  Manage members
+                                </span>
+                                <ToggleSwitch
+                                  enabled={rolePermissions.manageMembers}
+                                  onChange={(val) =>
+                                    setRolePermissions({
+                                      ...rolePermissions,
+                                      manageMembers: val,
+                                    })
+                                  }
+                                />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-700 dark:text-gray-100">
+                                  Delete members
+                                </span>
+                                <ToggleSwitch
+                                  enabled={rolePermissions.deleteMembers}
+                                  onChange={(val) =>
+                                    setRolePermissions({
+                                      ...rolePermissions,
+                                      deleteMembers: val,
+                                    })
+                                  }
+                                />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-700 dark:text-gray-100">
+                                  Ban members
+                                </span>
+                                <ToggleSwitch
+                                  enabled={rolePermissions.banMembers}
+                                  onChange={(val) =>
+                                    setRolePermissions({
+                                      ...rolePermissions,
+                                      banMembers: val,
+                                    })
+                                  }
+                                />
+                              </div>
                             </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-700 dark:text-gray-100">
-                                Delete members
-                              </span>
-                              <ToggleSwitch
-                                enabled={rolePermissions.deleteMembers}
-                                onChange={(val) =>
-                                  setRolePermissions({
-                                    ...rolePermissions,
-                                    deleteMembers: val,
-                                  })
-                                }
-                              />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-700 dark:text-gray-100">
-                                Ban members
-                              </span>
-                              <ToggleSwitch
-                                enabled={rolePermissions.banMembers}
-                                onChange={(val) =>
-                                  setRolePermissions({
-                                    ...rolePermissions,
-                                    banMembers: val,
-                                  })
-                                }
-                              />
-                            </div>
-                          </div>
                           )}
                         </div>
 
@@ -1938,120 +1938,120 @@ const ConfigureGroupPage = () => {
                             </span>
                           </button>
                           {!permissionSectionsCollapsed.moderation && (
-                          <div className="p-5 space-y-4 bg-gray-50 dark:bg-gray-800">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-700 dark:text-gray-100">
-                                View audit log
-                              </span>
-                              <ToggleSwitch
-                                enabled={rolePermissions.viewAuditLog}
-                                onChange={(val) =>
-                                  setRolePermissions({
-                                    ...rolePermissions,
-                                    viewAuditLog: val,
-                                  })
-                                }
-                              />
+                            <div className="p-5 space-y-4 bg-gray-50 dark:bg-gray-800">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-700 dark:text-gray-100">
+                                  View audit log
+                                </span>
+                                <ToggleSwitch
+                                  enabled={rolePermissions.viewAuditLog}
+                                  onChange={(val) =>
+                                    setRolePermissions({
+                                      ...rolePermissions,
+                                      viewAuditLog: val,
+                                    })
+                                  }
+                                />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-700 dark:text-gray-100">
+                                  Spend group funds
+                                </span>
+                                <ToggleSwitch
+                                  enabled={rolePermissions.spendGroupFunds}
+                                  onChange={(val) =>
+                                    setRolePermissions({
+                                      ...rolePermissions,
+                                      spendGroupFunds: val,
+                                    })
+                                  }
+                                />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-700 dark:text-gray-100">
+                                  Advertise group
+                                </span>
+                                <ToggleSwitch
+                                  enabled={rolePermissions.advertiseGroup}
+                                  onChange={(val) =>
+                                    setRolePermissions({
+                                      ...rolePermissions,
+                                      advertiseGroup: val,
+                                    })
+                                  }
+                                />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-700 dark:text-gray-100">
+                                  Manage ads
+                                </span>
+                                <ToggleSwitch
+                                  enabled={rolePermissions.manageAds}
+                                  onChange={(val) =>
+                                    setRolePermissions({
+                                      ...rolePermissions,
+                                      manageAds: val,
+                                    })
+                                  }
+                                />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-700 dark:text-gray-100">
+                                  Manage alliances
+                                </span>
+                                <ToggleSwitch
+                                  enabled={rolePermissions.manageAlliances}
+                                  onChange={(val) =>
+                                    setRolePermissions({
+                                      ...rolePermissions,
+                                      manageAlliances: val,
+                                    })
+                                  }
+                                />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-700 dark:text-gray-100">
+                                  Manage roles
+                                </span>
+                                <ToggleSwitch
+                                  enabled={rolePermissions.manageRoles}
+                                  onChange={(val) =>
+                                    setRolePermissions({
+                                      ...rolePermissions,
+                                      manageRoles: val,
+                                    })
+                                  }
+                                />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-700 dark:text-gray-100">
+                                  Manage store
+                                </span>
+                                <ToggleSwitch
+                                  enabled={rolePermissions.manageStore}
+                                  onChange={(val) =>
+                                    setRolePermissions({
+                                      ...rolePermissions,
+                                      manageStore: val,
+                                    })
+                                  }
+                                />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-700 dark:text-gray-100">
+                                  Manage games
+                                </span>
+                                <ToggleSwitch
+                                  enabled={rolePermissions.manageGames}
+                                  onChange={(val) =>
+                                    setRolePermissions({
+                                      ...rolePermissions,
+                                      manageGames: val,
+                                    })
+                                  }
+                                />
+                              </div>
                             </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-700 dark:text-gray-100">
-                                Spend group funds
-                              </span>
-                              <ToggleSwitch
-                                enabled={rolePermissions.spendGroupFunds}
-                                onChange={(val) =>
-                                  setRolePermissions({
-                                    ...rolePermissions,
-                                    spendGroupFunds: val,
-                                  })
-                                }
-                              />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-700 dark:text-gray-100">
-                                Advertise group
-                              </span>
-                              <ToggleSwitch
-                                enabled={rolePermissions.advertiseGroup}
-                                onChange={(val) =>
-                                  setRolePermissions({
-                                    ...rolePermissions,
-                                    advertiseGroup: val,
-                                  })
-                                }
-                              />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-700 dark:text-gray-100">
-                                Manage ads
-                              </span>
-                              <ToggleSwitch
-                                enabled={rolePermissions.manageAds}
-                                onChange={(val) =>
-                                  setRolePermissions({
-                                    ...rolePermissions,
-                                    manageAds: val,
-                                  })
-                                }
-                              />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-700 dark:text-gray-100">
-                                Manage alliances
-                              </span>
-                              <ToggleSwitch
-                                enabled={rolePermissions.manageAlliances}
-                                onChange={(val) =>
-                                  setRolePermissions({
-                                    ...rolePermissions,
-                                    manageAlliances: val,
-                                  })
-                                }
-                              />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-700 dark:text-gray-100">
-                                Manage roles
-                              </span>
-                              <ToggleSwitch
-                                enabled={rolePermissions.manageRoles}
-                                onChange={(val) =>
-                                  setRolePermissions({
-                                    ...rolePermissions,
-                                    manageRoles: val,
-                                  })
-                                }
-                              />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-700 dark:text-gray-100">
-                                Manage store
-                              </span>
-                              <ToggleSwitch
-                                enabled={rolePermissions.manageStore}
-                                onChange={(val) =>
-                                  setRolePermissions({
-                                    ...rolePermissions,
-                                    manageStore: val,
-                                  })
-                                }
-                              />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-700 dark:text-gray-100">
-                                Manage games
-                              </span>
-                              <ToggleSwitch
-                                enabled={rolePermissions.manageGames}
-                                onChange={(val) =>
-                                  setRolePermissions({
-                                    ...rolePermissions,
-                                    manageGames: val,
-                                  })
-                                }
-                              />
-                            </div>
-                          </div>
                           )}
                         </div>
 

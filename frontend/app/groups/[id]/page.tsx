@@ -442,10 +442,10 @@ const GroupDetailPage = () => {
           )}
 
           {/* Group Header */}
-          <div className="flex items-start gap-4 p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-start gap-3 p-3 border-b border-gray-200 dark:border-gray-700">
             {currentGroup ? (
               <>
-                <div className="w-[100px] h-[100px] border border-gray-200 dark:border-gray-700 rounded overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-700 relative">
+                <div className="w-[80px] h-[80px] border border-gray-200 dark:border-gray-700 rounded overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-700 relative">
                   {currentGroup.icon_url ? (
                     <Image
                       src={currentGroup.icon_url}
@@ -466,21 +466,21 @@ const GroupDetailPage = () => {
                     {currentGroup.name}
                   </h1>
 
-                  <div className="flex gap-6 mt-3">
+                  <div className="flex gap-4 mt-2">
                     <div>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 uppercase">
+                      <p className="text-xs text-gray-500 dark:text-gray-500 uppercase tracking-wide">
                         Members
                       </p>
-                      <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                      <p className="text-base font-bold text-gray-900 dark:text-gray-100">
                         {currentGroup.member_count}
                       </p>
                     </div>
                     {currentGroup.role && (
                       <div>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 uppercase">
+                        <p className="text-xs text-gray-500 dark:text-gray-500 uppercase tracking-wide">
                           Rank
                         </p>
-                        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        <p className="text-base font-bold text-gray-900 dark:text-gray-100">
                           {currentGroup.role}
                         </p>
                       </div>
@@ -659,12 +659,12 @@ const GroupDetailPage = () => {
 
           {/* Tabs */}
           {/* Tab Navigation */}
-          <div className="flex gap-2 px-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex gap-1 px-3 border-b border-gray-200 dark:border-gray-700">
             {tabs.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-3 text-sm font-semibold transition-colors relative ${
+                className={`px-3 py-2.5 text-sm font-semibold transition-colors relative ${
                   activeTab === tab
                     ? "text-gray-900 dark:text-gray-100"
                     : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
@@ -682,17 +682,19 @@ const GroupDetailPage = () => {
           {activeTab === "About" && (
             <>
               {/* Description Section */}
-              <DescriptionSection description={currentGroup?.description} />
+              <div className="p-3">
+                <DescriptionSection description={currentGroup?.description} />
+              </div>
 
               {/* Shout Section */}
-              <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3">
+              <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-3">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">
                   Shout
                 </h3>
 
                 {/* Current Shout Display */}
                 {currentGroup?.shout_text ? (
-                  <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 mb-3">
+                  <div className="p-2.5 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 mb-2">
                     <p className="text-sm text-gray-900 dark:text-gray-100">
                       {currentGroup.shout_text}
                     </p>
@@ -706,14 +708,14 @@ const GroupDetailPage = () => {
                     )}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                     Nothing has been said yet.
                   </p>
                 )}
 
                 {/* Shout Input - Only for Admin/Owner */}
                 {currentGroup && currentGroup.role === "Owner" && (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     <div className="flex gap-2">
                       <input
                         type="text"
@@ -753,12 +755,12 @@ const GroupDetailPage = () => {
               <SocialLinksSection groupId={currentGroup?.id} />
 
               {/* Wall Section */}
-              <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">
+              <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-3">
+                <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">
                   Wall
                 </h2>
 
-                <div className="flex gap-2 mb-4">
+                <div className="flex gap-2 mb-3">
                   <textarea
                     value={newPost}
                     onChange={(e) => setNewPost(e.target.value)}
@@ -776,10 +778,10 @@ const GroupDetailPage = () => {
                 </div>
 
                 {wallPosts.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     {wallPosts.map((post) => (
-                      <div key={post.id} className="flex gap-3">
-                        <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0 relative">
+                      <div key={post.id} className="flex gap-2.5 pb-2.5 border-b border-gray-100 dark:border-gray-800 last:border-0">
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0 relative">
                           <Image
                             src={`https://robohash.org/${post.author_username}?set=set3`}
                             alt={
@@ -787,7 +789,7 @@ const GroupDetailPage = () => {
                             }
                             fill
                             className="object-cover"
-                            sizes="40px"
+                            sizes="32px"
                           />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -856,9 +858,9 @@ const GroupDetailPage = () => {
           )}
 
           {activeTab === "Store" && (
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <div className="p-3">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100">
                   Store
                 </h2>
                 <Link
@@ -918,9 +920,9 @@ const GroupDetailPage = () => {
           )}
 
           {activeTab === "Alliances" && (
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <div className="p-3">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100">
                   Allies ({alliances.length})
                 </h2>
               </div>

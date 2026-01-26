@@ -96,39 +96,41 @@ export const createGroup = async (req: AuthRequest, res: Response) => {
           name,
           rank,
           description,
-          "canManageMembers",
-          "canManageRoles",
           "canPostOnWall",
           "canDeleteWallPosts",
           "canPostShout",
-          "canManageStore",
-          "canManageGames",
+          "canManageMembers",
+          "canDeleteMembers",
+          "canBanMembers",
           "canViewAuditLogs",
-          "canManageAlliances",
-          "canManageAds",
           "canSpendGroupFunds",
-          "canCreateInvites",
-          "canBanMembers"
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+          "canAdvertiseGroup",
+          "canManageAds",
+          "canManageAlliances",
+          "canManageRoles",
+          "canManageStore",
+          "canManageGames"
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
         [
           ownerRoleId,
           group.id,
           "Owner",
           255,
           "The group's owner with full permissions.",
-          true, // canManageMembers
-          true, // canManageRoles
           true, // canPostOnWall
           true, // canDeleteWallPosts
           true, // canPostShout
+          true, // canManageMembers
+          true, // canDeleteMembers
+          true, // canBanMembers
+          true, // canViewAuditLogs
+          true, // canSpendGroupFunds
+          true, // canAdvertiseGroup
+          true, // canManageAds
+          true, // canManageAlliances
+          true, // canManageRoles
           true, // canManageStore
           true, // canManageGames
-          true, // canViewAuditLogs
-          true, // canManageAlliances
-          true, // canManageAds
-          true, // canSpendGroupFunds
-          true, // canCreateInvites
-          true, // canBanMembers
         ],
       );
       console.log("Owner role created successfully");
@@ -143,39 +145,41 @@ export const createGroup = async (req: AuthRequest, res: Response) => {
           name,
           rank,
           description,
-          "canManageMembers",
-          "canManageRoles",
           "canPostOnWall",
           "canDeleteWallPosts",
           "canPostShout",
-          "canManageStore",
-          "canManageGames",
+          "canManageMembers",
+          "canDeleteMembers",
+          "canBanMembers",
           "canViewAuditLogs",
-          "canManageAlliances",
-          "canManageAds",
           "canSpendGroupFunds",
-          "canCreateInvites",
-          "canBanMembers"
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+          "canAdvertiseGroup",
+          "canManageAds",
+          "canManageAlliances",
+          "canManageRoles",
+          "canManageStore",
+          "canManageGames"
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
         [
           memberRoleId,
           group.id,
           "Member",
           0,
           "Default member role with basic permissions.",
-          false, // canManageMembers
-          false, // canManageRoles
           true,  // canPostOnWall
           false, // canDeleteWallPosts
           false, // canPostShout
+          false, // canManageMembers
+          false, // canDeleteMembers
+          false, // canBanMembers
+          false, // canViewAuditLogs
+          false, // canSpendGroupFunds
+          false, // canAdvertiseGroup
+          false, // canManageAds
+          false, // canManageAlliances
+          false, // canManageRoles
           false, // canManageStore
           false, // canManageGames
-          false, // canViewAuditLogs
-          false, // canManageAlliances
-          false, // canManageAds
-          false, // canSpendGroupFunds
-          true,  // canCreateInvites
-          false, // canBanMembers
         ],
       );
       console.log("Member role created successfully");

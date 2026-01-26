@@ -113,19 +113,20 @@ const ConfigureGroupPage = () => {
     moderation: false,
   });
   const [rolePermissions, setRolePermissions] = useState({
-    viewWall: true,
     postWall: true,
     deleteWallPosts: false,
-    viewShout: true,
-    createAnnouncements: false,
+    postShout: false,
     manageMembers: false,
     deleteMembers: false,
-    createInvites: false,
+    banMembers: false,
     viewAuditLog: false,
     spendGroupFunds: false,
     advertiseGroup: false,
+    manageAds: false,
     manageAlliances: false,
     manageRoles: false,
+    manageStore: false,
+    manageGames: false,
   });
 
   // Initialize activeSection from URL params if available
@@ -503,19 +504,20 @@ const ConfigureGroupPage = () => {
     setRoleDescription("");
     setRoleRank(0);
     setRolePermissions({
-      viewWall: true,
       postWall: true,
       deleteWallPosts: false,
-      viewShout: true,
-      createAnnouncements: false,
+      postShout: false,
       manageMembers: false,
       deleteMembers: false,
-      createInvites: false,
+      banMembers: false,
       viewAuditLog: false,
       spendGroupFunds: false,
       advertiseGroup: false,
+      manageAds: false,
       manageAlliances: false,
       manageRoles: false,
+      manageStore: false,
+      manageGames: false,
     });
   };
 
@@ -526,19 +528,20 @@ const ConfigureGroupPage = () => {
     setRoleDescription(role.description || "");
     setRoleRank(role.rank || 0);
     setRolePermissions({
-      viewWall: role.can_view_wall !== false,
       postWall: role.can_post_on_wall !== false,
       deleteWallPosts: role.can_delete_wall_posts || false,
-      viewShout: role.can_view_shout !== false,
-      createAnnouncements: role.can_post_shout || false,
+      postShout: role.can_post_shout || false,
       manageMembers: role.can_manage_members || false,
       deleteMembers: role.can_delete_members || false,
-      createInvites: role.can_create_invites || false,
+      banMembers: role.can_ban_members || false,
       viewAuditLog: role.can_view_audit_logs || false,
       spendGroupFunds: role.can_spend_group_funds || false,
       advertiseGroup: role.can_advertise_group || false,
+      manageAds: role.can_manage_ads || false,
       manageAlliances: role.can_manage_alliances || false,
       manageRoles: role.can_manage_roles || false,
+      manageStore: role.can_manage_store || false,
+      manageGames: role.can_manage_games || false,
     });
   };
 
@@ -552,19 +555,20 @@ const ConfigureGroupPage = () => {
         name: roleName,
         description: roleDescription,
         rank: roleRank,
-        canViewWall: rolePermissions.viewWall,
         canPostOnWall: rolePermissions.postWall,
         canDeleteWallPosts: rolePermissions.deleteWallPosts,
-        canViewShout: rolePermissions.viewShout,
-        canPostShout: rolePermissions.createAnnouncements,
+        canPostShout: rolePermissions.postShout,
         canManageMembers: rolePermissions.manageMembers,
         canDeleteMembers: rolePermissions.deleteMembers,
-        canCreateInvites: rolePermissions.createInvites,
+        canBanMembers: rolePermissions.banMembers,
         canViewAuditLogs: rolePermissions.viewAuditLog,
         canSpendGroupFunds: rolePermissions.spendGroupFunds,
         canAdvertiseGroup: rolePermissions.advertiseGroup,
+        canManageAds: rolePermissions.manageAds,
         canManageAlliances: rolePermissions.manageAlliances,
         canManageRoles: rolePermissions.manageRoles,
+        canManageStore: rolePermissions.manageStore,
+        canManageGames: rolePermissions.manageGames,
       };
 
       let response;
@@ -1823,20 +1827,6 @@ const ConfigureGroupPage = () => {
                           <div className="p-5 space-y-4 bg-gray-800 dark:bg-gray-900">
                             <div className="flex items-center justify-between">
                               <span className="text-sm text-gray-100">
-                                View community wall
-                              </span>
-                              <ToggleSwitch
-                                enabled={rolePermissions.viewWall}
-                                onChange={(val) =>
-                                  setRolePermissions({
-                                    ...rolePermissions,
-                                    viewWall: val,
-                                  })
-                                }
-                              />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-100">
                                 Post on community wall
                               </span>
                               <ToggleSwitch
@@ -1865,28 +1855,14 @@ const ConfigureGroupPage = () => {
                             </div>
                             <div className="flex items-center justify-between">
                               <span className="text-sm text-gray-100">
-                                View community shout
+                                Post group shout
                               </span>
                               <ToggleSwitch
-                                enabled={rolePermissions.viewShout}
+                                enabled={rolePermissions.postShout}
                                 onChange={(val) =>
                                   setRolePermissions({
                                     ...rolePermissions,
-                                    viewShout: val,
-                                  })
-                                }
-                              />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-100">
-                                Create community announcements
-                              </span>
-                              <ToggleSwitch
-                                enabled={rolePermissions.createAnnouncements}
-                                onChange={(val) =>
-                                  setRolePermissions({
-                                    ...rolePermissions,
-                                    createAnnouncements: val,
+                                    postShout: val,
                                   })
                                 }
                               />
@@ -1940,14 +1916,14 @@ const ConfigureGroupPage = () => {
                             </div>
                             <div className="flex items-center justify-between">
                               <span className="text-sm text-gray-100">
-                                Create invites
+                                Ban members
                               </span>
                               <ToggleSwitch
-                                enabled={rolePermissions.createInvites}
+                                enabled={rolePermissions.banMembers}
                                 onChange={(val) =>
                                   setRolePermissions({
                                     ...rolePermissions,
-                                    createInvites: val,
+                                    banMembers: val,
                                   })
                                 }
                               />
@@ -2015,6 +1991,20 @@ const ConfigureGroupPage = () => {
                             </div>
                             <div className="flex items-center justify-between">
                               <span className="text-sm text-gray-100">
+                                Manage ads
+                              </span>
+                              <ToggleSwitch
+                                enabled={rolePermissions.manageAds}
+                                onChange={(val) =>
+                                  setRolePermissions({
+                                    ...rolePermissions,
+                                    manageAds: val,
+                                  })
+                                }
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-gray-100">
                                 Manage alliances
                               </span>
                               <ToggleSwitch
@@ -2037,6 +2027,34 @@ const ConfigureGroupPage = () => {
                                   setRolePermissions({
                                     ...rolePermissions,
                                     manageRoles: val,
+                                  })
+                                }
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-gray-100">
+                                Manage store
+                              </span>
+                              <ToggleSwitch
+                                enabled={rolePermissions.manageStore}
+                                onChange={(val) =>
+                                  setRolePermissions({
+                                    ...rolePermissions,
+                                    manageStore: val,
+                                  })
+                                }
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-gray-100">
+                                Manage games
+                              </span>
+                              <ToggleSwitch
+                                enabled={rolePermissions.manageGames}
+                                onChange={(val) =>
+                                  setRolePermissions({
+                                    ...rolePermissions,
+                                    manageGames: val,
                                   })
                                 }
                               />

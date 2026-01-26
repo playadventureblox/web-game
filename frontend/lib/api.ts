@@ -733,16 +733,22 @@ export const groupsApi = {
     id: string,
     data: {
       name: string;
+      description?: string;
       rank?: number;
-      canManageMembers?: boolean;
-      canManageRoles?: boolean;
       canPostOnWall?: boolean;
       canDeleteWallPosts?: boolean;
       canPostShout?: boolean;
+      canManageMembers?: boolean;
+      canDeleteMembers?: boolean;
+      canBanMembers?: boolean;
+      canViewAuditLogs?: boolean;
+      canSpendGroupFunds?: boolean;
+      canAdvertiseGroup?: boolean;
+      canManageAds?: boolean;
+      canManageAlliances?: boolean;
+      canManageRoles?: boolean;
       canManageStore?: boolean;
       canManageGames?: boolean;
-      canViewAuditLogs?: boolean;
-      canManageAlliances?: boolean;
     },
   ): Promise<ApiResponse<{ role: unknown }>> => {
     const token = storage.getAccessToken();
@@ -768,16 +774,22 @@ export const groupsApi = {
     roleId: string,
     data: {
       name?: string;
+      description?: string;
       rank?: number;
-      canManageMembers?: boolean;
-      canManageRoles?: boolean;
       canPostOnWall?: boolean;
       canDeleteWallPosts?: boolean;
       canPostShout?: boolean;
+      canManageMembers?: boolean;
+      canDeleteMembers?: boolean;
+      canBanMembers?: boolean;
+      canViewAuditLogs?: boolean;
+      canSpendGroupFunds?: boolean;
+      canAdvertiseGroup?: boolean;
+      canManageAds?: boolean;
+      canManageAlliances?: boolean;
+      canManageRoles?: boolean;
       canManageStore?: boolean;
       canManageGames?: boolean;
-      canViewAuditLogs?: boolean;
-      canManageAlliances?: boolean;
     },
   ): Promise<ApiResponse<{ role: unknown }>> => {
     const token = storage.getAccessToken();

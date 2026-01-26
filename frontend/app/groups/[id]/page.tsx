@@ -79,6 +79,17 @@ const GroupDetailPage = () => {
     message: "",
   });
   const [actionLoading, setActionLoading] = useState(false);
+  const [joining, setJoining] = useState(false);
+  const [alliances, setAlliances] = useState<
+    Array<{
+      id: string;
+      allied_group_name: string;
+      allied_group_icon?: string;
+      allied_group_member_count: number;
+      allied_group_verified: boolean;
+    }>
+  >([]);
+  const [loadingAlliances, setLoadingAlliances] = useState(true);
 
   // Fetch user's groups for sidebar
   useEffect(() => {
@@ -116,6 +127,27 @@ const GroupDetailPage = () => {
     };
 
     fetchGroupDetails();
+  }, [groupId]);
+
+  // Fetch alliances
+  useEffect(() => {
+    const fetchAlliances = async () => {
+      if (!groupId) return;
+
+      setLoadingAlliances(true);
+      try {
+        const response = await groupsApi.getGroupAlliances(groupId);
+        if (response.success && response.data) {
+          setAlliances((response.data.alliances as typeof alliances) || []);
+        }
+      } catch (error) {
+        console.error("Error fetching alliances:", error);
+      } finally {
+        setLoadingAlliances(false);
+      }
+    };
+
+    fetchAlliances();
   }, [groupId]);
 
   // Get current group - prefer detailed data, fallback to sidebar data
@@ -169,45 +201,47 @@ const GroupDetailPage = () => {
     }
   };
 
-  // Mock allies/alliances communities
-  const allies = [
-    {
-      id: 1,
-      name: "DuckXander Valentine",
-      image: "https://robohash.org/duckval?set=set3",
-      members: 271,
-    },
-    {
-      id: 2,
-      name: "DuckXander St. Patrick",
-      image: "https://robohash.org/duckstpat?set=set3",
-      members: 135,
-    },
-    {
-      id: 3,
-      name: "DuckXander Easter",
-      image: "https://robohash.org/duckeaster?set=set3",
-      members: 188,
-    },
-    {
-      id: 4,
-      name: "DuckXander 4th of July",
-      image: "https://robohash.org/duck4th?set=set3",
-      members: 119,
-    },
-    {
-      id: 5,
-      name: "DuckXander Halloween",
-      image: "https://robohash.org/duckhalloween?set=set3",
-      members: 178,
-    },
-    {
-      id: 6,
-      name: "DuckXander Christmas",
-      image: "https://robohash.org/duckxmas?set=set3",
-      members: 146,
-    },
-  ];
+  // Handle join group
+  const handleJoinGroup = async () => {
+    if (!groupId) return;
+
+    setJoining(true);
+    try {
+      const response = await groupsApi.joinGroup(groupId);
+      if (response.success) {
+        // Refresh group details to update member count and role
+        const detailsResponse = await groupsApi.getGroupById(groupId);
+        if (detailsResponse.success && detailsResponse.data) {
+          setCurrentGroupDetails(detailsResponse.data.group as Group);
+        }
+        // Refresh user groups list
+        const userGroupsResponse = await groupsApi.getUserGroups();
+        if (userGroupsResponse.success && userGroupsResponse.data) {
+          setUserGroups((userGroupsResponse.data.groups as Group[]) || []);
+        }
+        setSuccessMessage({
+          title: "Success",
+          message: "Successfully joined the group!",
+        });
+        setShowSuccessModal(true);
+      } else {
+        setSuccessMessage({
+          title: "Error",
+          message: response.error || response.message || "Failed to join group",
+        });
+        setShowSuccessModal(true);
+      }
+    } catch (error) {
+      console.error("Error joining group:", error);
+      setSuccessMessage({
+        title: "Error",
+        message: "An error occurred while joining the group",
+      });
+      setShowSuccessModal(true);
+    } finally {
+      setJoining(false);
+    }
+  };
 
   // Mock store items
   const storeItems = [
@@ -438,6 +472,19 @@ const GroupDetailPage = () => {
                       </div>
                     )}
                   </div>
+
+                  {/* Join Button - Show only if user is not a member */}
+                  {!currentGroup.role && (
+                    <div className="mt-4">
+                      <button
+                        onClick={handleJoinGroup}
+                        disabled={joining}
+                        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {joining ? "Joining..." : "Join Group"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </>
             ) : (
@@ -833,47 +880,71 @@ const GroupDetailPage = () => {
             <div className="p-4">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  Allies
+                  Allies ({alliances.length})
                 </h2>
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <button className="hover:text-gray-900 dark:hover:text-gray-100">
-                    &lt;
-                  </button>
-                  <span>Page 1</span>
-                  <button className="hover:text-gray-900 dark:hover:text-gray-100">
-                    &gt;
-                  </button>
-                </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {allies.map((ally) => (
-                  <div
-                    key={ally.id}
-                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-                  >
-                    <div className="aspect-square bg-gray-100 dark:bg-gray-700 overflow-hidden relative">
-                      <Image
-                        src={ally.image}
-                        alt={ally.name}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <div className="p-3">
-                      <h3
-                        className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate"
-                        title={ally.name}
-                      >
-                        {ally.name}
-                      </h3>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                        {ally.members} Members
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              {loadingAlliances ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400" />
+                  <span className="ml-3 text-gray-600 dark:text-gray-400">
+                    Loading alliances...
+                  </span>
+                </div>
+              ) : alliances.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {alliances.map((alliance) => (
+                    <Link
+                      key={alliance.id}
+                      href={`/groups/${alliance.id}`}
+                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                    >
+                      <div className="aspect-square bg-gray-100 dark:bg-gray-700 overflow-hidden relative">
+                        {alliance.allied_group_icon ? (
+                          <Image
+                            src={alliance.allied_group_icon}
+                            alt={alliance.allied_group_name}
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-4xl">
+                            🎮
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-3">
+                        <div className="flex items-center gap-1">
+                          <h3
+                            className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate"
+                            title={alliance.allied_group_name}
+                          >
+                            {alliance.allied_group_name}
+                          </h3>
+                          {alliance.allied_group_verified && (
+                            <span className="text-blue-500 text-xs">✓</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                          {alliance.allied_group_member_count?.toLocaleString() || 0} Members
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-600 dark:text-gray-400">
+                    No alliances yet
+                  </p>
+                  {currentGroup?.role === "Owner" && (
+                    <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                      Send alliance requests to other groups from the Configure page
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -902,6 +973,11 @@ const GroupDetailPage = () => {
                   : "Left group successfully!",
               });
               setShowSuccessModal(true);
+              // Refresh user groups list
+              const userGroupsResponse = await groupsApi.getUserGroups();
+              if (userGroupsResponse.success && userGroupsResponse.data) {
+                setUserGroups((userGroupsResponse.data.groups as Group[]) || []);
+              }
               setTimeout(() => {
                 router.push("/groups");
               }, 2000);

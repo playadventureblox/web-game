@@ -332,33 +332,34 @@ const GroupDetailPage = () => {
         setSidebarOpen={setSidebarOpen}
       />
 
-      {/* Create Group Button Bar */}
-      <div className="flex justify-end p-3 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
-        <Link href="/groups/create">
-          <button className="px-4 py-1.5 text-sm border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-            Create Group
-          </button>
-        </Link>
-      </div>
-
       {/* Main Layout */}
-      <div className="flex w-full gap-6 px-6 py-6">
-        {/* Left Sidebar - 25% width, no borders/padding/inner sections */}
-        <div className="w-1/4 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 pr-6">
-          {/* Groups List - Clean, no containers */}
-          <div className="space-y-1">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                Groups
-              </h2>
-              <Link
-                href="/groups"
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                See All
-              </Link>
-            </div>
+      <div className="flex w-full h-[calc(100vh-64px)]">
+        {/* Left Sidebar - Fixed, Independent Scroll */}
+        <div className="w-1/4 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 overflow-y-auto px-6 py-6 flex flex-col">
+          {/* Groups Header */}
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+              Communities
+            </h2>
+            <Link
+              href="/groups"
+              className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              See All
+            </Link>
+          </div>
 
+          {/* Search Bar */}
+          <div className="mb-4">
+            <input
+              type="text"
+              placeholder="Search My Communities"
+              className="w-full px-3 py-2 text-sm bg-gray-100 dark:bg-gray-800 border-none rounded text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Groups List */}
+          <div className="flex-1 space-y-1 mb-4">
             {loadingGroups ? (
               <div className="py-4 text-center">
                 <Loader2 className="w-5 h-5 animate-spin text-blue-600 dark:text-blue-400 mx-auto" />
@@ -368,48 +369,58 @@ const GroupDetailPage = () => {
                 <p className="text-xs text-gray-600 dark:text-gray-400">
                   No groups yet
                 </p>
-                <Link
-                  href="/groups/create"
-                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1 inline-block"
-                >
-                  Create one
-                </Link>
               </div>
             ) : (
               userGroups.map((group) => (
-                  <Link
-                    key={group.id}
-                    href={`/groups/${group.id}`}
-                    className={`flex items-center gap-2 py-2 text-left hover:opacity-80 transition-opacity ${
-                      groupId === group.id ? "font-semibold" : ""
-                    }`}
-                  >
-                    <div className="w-8 h-8 rounded overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0 relative">
-                      {group.icon_url ? (
-                        <Image
-                          src={group.icon_url}
-                          alt={group.name}
-                          fill
-                          className="object-cover"
-                          sizes="32px"
-                        />
-                      ) : (
-                        <span className="text-sm flex items-center justify-center w-full h-full">
-                          🎮
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-sm text-gray-900 dark:text-gray-100 truncate">
+                <Link
+                  key={group.id}
+                  href={`/groups/${group.id}`}
+                  className={`flex items-center gap-3 py-2 px-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
+                    groupId === group.id ? "bg-gray-100 dark:bg-gray-800" : ""
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0 relative">
+                    {group.icon_url ? (
+                      <Image
+                        src={group.icon_url}
+                        alt={group.name}
+                        fill
+                        className="object-cover"
+                        sizes="40px"
+                      />
+                    ) : (
+                      <span className="text-lg flex items-center justify-center w-full h-full">
+                        🎮
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                       {group.name}
-                    </span>
-                  </Link>
-                ))
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {group.member_count} members
+                    </p>
+                  </div>
+                </Link>
+              ))
             )}
+          </div>
+
+          {/* Create Community Button - Sticky at bottom when scrolling */}
+          <div className="mt-auto pt-4 border-t border-gray-200 dark:border-gray-800">
+            <Link
+              href="/groups/create"
+              className="block w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 font-semibold py-2.5 text-sm rounded-lg transition-colors text-center"
+            >
+              Create Community
+            </Link>
           </div>
         </div>
 
-        {/* Main Content - 75% width */}
-        <div className="w-3/4 bg-white dark:bg-gray-900 rounded-lg overflow-hidden">
+        {/* Main Content - 75% width, Scrollable */}
+        <div className="w-3/4 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-900">
           {/* Cover Photo - Full width if exists */}
           {currentGroup?.cover_photo_url && (
             <div className="w-full h-[200px] relative overflow-hidden">
@@ -973,6 +984,7 @@ const GroupDetailPage = () => {
               )}
             </div>
           )}
+          </div>
         </div>
       </div>
 
@@ -980,6 +992,7 @@ const GroupDetailPage = () => {
       <div className="mt-8">
         <Footer />
       </div>
+
       {/* Modals */}
       <ConfirmModal
         isOpen={showLeaveConfirm}

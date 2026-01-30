@@ -211,7 +211,7 @@ export const acceptFriendRequest = async (req: AuthRequest, res: Response) => {
         'friend_request_accepted',
         `${userId} accepted your friend request`,
         userId,
-        requestId
+        typeof requestId === 'string' ? requestId : requestId[0]
       );
     } catch (error) {
       console.error('Failed to create notification:', error);

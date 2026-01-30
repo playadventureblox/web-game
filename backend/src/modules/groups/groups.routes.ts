@@ -23,6 +23,9 @@ import {
   updateGroupRole,
   deleteGroupRole,
   updateGroupShout,
+  getJoinRequests,
+  acceptJoinRequest,
+  rejectJoinRequest,
 } from './groups.controller.js';
 import {
   getGroupSettings,
@@ -62,6 +65,9 @@ router.get("/user/:userId", getUserGroups);
 router.post("/", authMiddleware, createGroup);
 router.put("/:id", authMiddleware, updateGroup);
 router.post("/:id/join", authMiddleware, joinGroup);
+router.get("/:id/join-requests", authMiddleware, getJoinRequests);
+router.post("/:id/join-requests/:requestId/accept", authMiddleware, acceptJoinRequest);
+router.post("/:id/join-requests/:requestId/reject", authMiddleware, rejectJoinRequest);
 router.post("/:id/leave", authMiddleware, leaveGroupEnhanced);
 router.post("/:id/wall", authMiddleware, createGroupWallPost);
 router.post("/:id/wall/:postId/replies", authMiddleware, createWallPostReply);

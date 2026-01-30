@@ -612,6 +612,88 @@ export const joinGroup = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Check if user has a pending join request
+    const existingRequestResult = await db.query(
+      'SELECT id, status FROM group_join_requests WHERE "groupId" = $1 AND "userId" = $2',
+      [id, userId],
+    );
+
+    if (existingRequestResult.rows.length > 0) {
+      const request = existingRequestResult.rows[0];
+      if (request.status === 'pending') {
+        return res.status(409).json({
+          success: false,
+          message: "You already have a pending join request for this group",
+        });
+      } else if (request.status === 'rejected') {
+        return res.status(403).json({
+          success: false,
+          message: "Your join request was rejected. Please contact the group owner.",
+        });
+      }
+    }
+
+    // Get group settings to check join requirements
+    const settingsResult = await db.query(
+      'SELECT manual_approval, account_age_requirement FROM group_settings WHERE "groupId" = $1',
+      [id],
+    );
+
+    const settings = settingsResult.rows[0] || {};
+    const manualApproval = settings.manual_approval || false;
+    const accountAgeRequirement = settings.account_age_requirement || 'none';
+
+    // Check account age requirement
+    if (accountAgeRequirement !== 'none') {
+      const userResult = await db.query(
+        'SELECT "createdAt" FROM users WHERE id = $1',
+        [userId],
+      );
+
+      if (userResult.rows.length > 0) {
+        const userCreatedAt = new Date(userResult.rows[0].createdAt);
+        const now = new Date();
+        const accountAgeDays = Math.floor((now.getTime() - userCreatedAt.getTime()) / (1000 * 60 * 60 * 24));
+
+        const requiredDays: Record<string, number> = {
+          '1day': 1,
+          '3days': 3,
+          '7days': 7,
+          '30days': 30,
+          '90days': 90,
+        };
+
+        const required = requiredDays[accountAgeRequirement] || 0;
+        if (accountAgeDays < required) {
+          return res.status(403).json({
+            success: false,
+            message: `Your account must be at least ${required} day(s) old to join this group. Your account is ${accountAgeDays} day(s) old.`,
+          });
+        }
+      }
+    }
+
+    // If manual approval is enabled, create a join request
+    if (manualApproval) {
+      const requestId = uuidv4();
+      await db.query(
+        `INSERT INTO group_join_requests (
+          id,
+          "groupId",
+          "userId",
+          status,
+          "requestedAt"
+        ) VALUES ($1, $2, $3, 'pending', NOW())`,
+        [requestId, id, userId],
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Join request submitted successfully. Please wait for approval from group administrators.",
+        requiresApproval: true,
+      });
+    }
+
     // Get the default Member role for this group
     const memberRoleResult = await db.query(
       'SELECT id FROM group_roles WHERE "groupId" = $1 AND name = $2',
@@ -644,6 +726,7 @@ export const joinGroup = async (req: AuthRequest, res: Response) => {
     return res.status(200).json({
       success: true,
       message: "Successfully joined the group",
+      requiresApproval: false,
     });
   } catch (error) {
     console.error("Join group error:", error);
@@ -651,6 +734,276 @@ export const joinGroup = async (req: AuthRequest, res: Response) => {
       success: false,
       message: "Internal server error",
       error: process.env.NODE_ENV === "development" ? error : undefined,
+    });
+  }
+};
+
+/**
+ * @route   GET /api/v1/groups/:id/join-requests
+ * @desc    Get pending join requests for a group
+ * @access  Private (Group admins only)
+ */
+export const getJoinRequests = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { id } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    // Check if user has permission to manage members
+    const memberResult = await db.query(
+      `SELECT gm.id, gr.name, gr."canManageMembers"
+       FROM group_members gm
+       LEFT JOIN group_roles gr ON gm."roleId" = gr.id
+       WHERE gm."groupId" = $1 AND gm."userId" = $2`,
+      [id, userId],
+    );
+
+    if (memberResult.rows.length === 0) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not a member of this group",
+      });
+    }
+
+    const member = memberResult.rows[0];
+    if (member.name !== 'Owner' && !member.canManageMembers) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have permission to view join requests",
+      });
+    }
+
+    // Get pending join requests
+    const requestsResult = await db.query(
+      `SELECT
+        jr.id,
+        jr."userId" as user_id,
+        jr.status,
+        jr."requestedAt" as requested_at,
+        jr.message,
+        u.username,
+        u."displayName" as display_name,
+        u."avatarUrl" as avatar_url,
+        u."createdAt" as user_created_at
+      FROM group_join_requests jr
+      LEFT JOIN users u ON jr."userId" = u.id
+      WHERE jr."groupId" = $1 AND jr.status = 'pending'
+      ORDER BY jr."requestedAt" DESC`,
+      [id],
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        requests: requestsResult.rows,
+      },
+    });
+  } catch (error) {
+    console.error("Get join requests error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+/**
+ * @route   POST /api/v1/groups/:id/join-requests/:requestId/accept
+ * @desc    Accept a join request
+ * @access  Private (Group admins only)
+ */
+export const acceptJoinRequest = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { id, requestId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    // Check if user has permission to manage members
+    const memberResult = await db.query(
+      `SELECT gm.id, gr.name, gr."canManageMembers"
+       FROM group_members gm
+       LEFT JOIN group_roles gr ON gm."roleId" = gr.id
+       WHERE gm."groupId" = $1 AND gm."userId" = $2`,
+      [id, userId],
+    );
+
+    if (memberResult.rows.length === 0) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not a member of this group",
+      });
+    }
+
+    const member = memberResult.rows[0];
+    if (member.name !== 'Owner' && !member.canManageMembers) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have permission to accept join requests",
+      });
+    }
+
+    // Get the join request
+    const requestResult = await db.query(
+      'SELECT "userId", status FROM group_join_requests WHERE id = $1 AND "groupId" = $2',
+      [requestId, id],
+    );
+
+    if (requestResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Join request not found",
+      });
+    }
+
+    const request = requestResult.rows[0];
+    if (request.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: "This request has already been processed",
+      });
+    }
+
+    // Get the default Member role
+    const memberRoleResult = await db.query(
+      'SELECT id FROM group_roles WHERE "groupId" = $1 AND name = $2',
+      [id, 'Member'],
+    );
+
+    const memberRoleId = memberRoleResult.rows.length > 0 
+      ? memberRoleResult.rows[0].id 
+      : null;
+
+    // Add user to group
+    const newMemberId = uuidv4();
+    await db.query(
+      `INSERT INTO group_members (
+        id,
+        "groupId",
+        "userId",
+        "roleId",
+        "joinedAt"
+      ) VALUES ($1, $2, $3, $4, NOW())`,
+      [newMemberId, id, request.userId, memberRoleId],
+    );
+
+    // Update join request status
+    await db.query(
+      `UPDATE group_join_requests 
+       SET status = 'approved', "respondedAt" = NOW(), "respondedBy" = $1
+       WHERE id = $2`,
+      [userId, requestId],
+    );
+
+    // Update member count
+    await db.query(
+      'UPDATE groups SET "memberCount" = "memberCount" + 1 WHERE id = $1',
+      [id],
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Join request accepted successfully",
+    });
+  } catch (error) {
+    console.error("Accept join request error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+/**
+ * @route   POST /api/v1/groups/:id/join-requests/:requestId/reject
+ * @desc    Reject a join request
+ * @access  Private (Group admins only)
+ */
+export const rejectJoinRequest = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { id, requestId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    // Check if user has permission to manage members
+    const memberResult = await db.query(
+      `SELECT gm.id, gr.name, gr."canManageMembers"
+       FROM group_members gm
+       LEFT JOIN group_roles gr ON gm."roleId" = gr.id
+       WHERE gm."groupId" = $1 AND gm."userId" = $2`,
+      [id, userId],
+    );
+
+    if (memberResult.rows.length === 0) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not a member of this group",
+      });
+    }
+
+    const member = memberResult.rows[0];
+    if (member.name !== 'Owner' && !member.canManageMembers) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have permission to reject join requests",
+      });
+    }
+
+    // Get the join request
+    const requestResult = await db.query(
+      'SELECT status FROM group_join_requests WHERE id = $1 AND "groupId" = $2',
+      [requestId, id],
+    );
+
+    if (requestResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Join request not found",
+      });
+    }
+
+    const request = requestResult.rows[0];
+    if (request.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: "This request has already been processed",
+      });
+    }
+
+    // Update join request status
+    await db.query(
+      `UPDATE group_join_requests 
+       SET status = 'rejected', "respondedAt" = NOW(), "respondedBy" = $1
+       WHERE id = $2`,
+      [userId, requestId],
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Join request rejected successfully",
+    });
+  } catch (error) {
+    console.error("Reject join request error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
     });
   }
 };
@@ -1061,7 +1414,7 @@ export const getWallPostReplies = async (req: Request, res: Response) => {
 export const createWallPostReply = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId;
-    const { id, postId } = req.params;
+    const { postId } = req.params;
     const { content } = req.body;
 
     if (!userId) {

@@ -216,21 +216,32 @@ const GroupDetailPage = () => {
     try {
       const response = await groupsApi.joinGroup(groupId);
       if (response.success) {
-        // Refresh group details to update member count and role
-        const detailsResponse = await groupsApi.getGroupById(groupId);
-        if (detailsResponse.success && detailsResponse.data) {
-          setCurrentGroupDetails(detailsResponse.data.group as Group);
+        const requiresApproval = (response as any).requiresApproval;
+        
+        if (requiresApproval) {
+          // Join request submitted - show pending message
+          setSuccessMessage({
+            title: "Join Request Submitted",
+            message: response.message || "Your join request has been submitted. Please wait for approval from group administrators.",
+          });
+          setShowSuccessModal(true);
+        } else {
+          // Immediately joined - refresh group details
+          const detailsResponse = await groupsApi.getGroupById(groupId);
+          if (detailsResponse.success && detailsResponse.data) {
+            setCurrentGroupDetails(detailsResponse.data.group as Group);
+          }
+          // Refresh user groups list
+          const userGroupsResponse = await groupsApi.getUserGroups();
+          if (userGroupsResponse.success && userGroupsResponse.data) {
+            setUserGroups((userGroupsResponse.data.groups as Group[]) || []);
+          }
+          setSuccessMessage({
+            title: "Success",
+            message: "Successfully joined the group!",
+          });
+          setShowSuccessModal(true);
         }
-        // Refresh user groups list
-        const userGroupsResponse = await groupsApi.getUserGroups();
-        if (userGroupsResponse.success && userGroupsResponse.data) {
-          setUserGroups((userGroupsResponse.data.groups as Group[]) || []);
-        }
-        setSuccessMessage({
-          title: "Success",
-          message: "Successfully joined the group!",
-        });
-        setShowSuccessModal(true);
       } else {
         setSuccessMessage({
           title: "Error",
@@ -605,6 +616,15 @@ const GroupDetailPage = () => {
                   <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                     {currentGroup.name}
                   </h1>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    By{" "}
+                    <a
+                      href={`/profile/${currentGroup.owner_username}`}
+                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      {currentGroup.owner_display_name || currentGroup.owner_username}
+                    </a>
+                  </p>
 
                   <div className="flex gap-8 mt-4">
                     <div>

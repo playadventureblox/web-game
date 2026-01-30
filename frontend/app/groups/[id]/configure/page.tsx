@@ -74,9 +74,6 @@ const ConfigureGroupPage = () => {
 
   // Settings states
   const [manualApproval, setManualApproval] = useState(false);
-  const [verificationLevel, setVerificationLevel] = useState<
-    "none" | "low" | "medium" | "high"
-  >("none");
   const [accountAge, setAccountAge] = useState<
     "none" | "1day" | "3days" | "7days" | "30days" | "90days"
   >("none");
@@ -98,6 +95,8 @@ const ConfigureGroupPage = () => {
   const [members, setMembers] = useState<any[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [openMemberMenu, setOpenMemberMenu] = useState<string | null>(null);
+  const [joinRequests, setJoinRequests] = useState<any[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
   
   // Role assignment confirmation modal states
   const [showRoleConfirmModal, setShowRoleConfirmModal] = useState(false);
@@ -227,7 +226,6 @@ const ConfigureGroupPage = () => {
         if (settingsResponse.success && settingsResponse.data) {
           const settings = settingsResponse.data.settings as any;
           setManualApproval(settings.manual_approval || false);
-          setVerificationLevel(settings.verification_level || "none");
           setAccountAge(settings.account_age_requirement || "none");
         }
 
@@ -251,6 +249,12 @@ const ConfigureGroupPage = () => {
           setMembers((membersResponse.data.members as any[]) || []);
         }
 
+        // Fetch join requests
+        const joinRequestsResponse = await groupsApi.getJoinRequests(groupId);
+        if (joinRequestsResponse.success && joinRequestsResponse.data) {
+          setJoinRequests((joinRequestsResponse.data.requests as any[]) || []);
+        }
+
         // Fetch roles for members section
         const rolesResponse = await groupsApi.getGroupRoles(groupId);
         if (rolesResponse.success && rolesResponse.data) {
@@ -265,6 +269,38 @@ const ConfigureGroupPage = () => {
 
     fetchGroupData();
   }, [groupId]);
+
+  const fetchMembers = async () => {
+    if (!groupId) return;
+
+    setLoadingMembers(true);
+    try {
+      const response = await groupsApi.getGroupMembers(groupId);
+      if (response.success && response.data) {
+        setMembers((response.data.members as any[]) || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch members:", error);
+    } finally {
+      setLoadingMembers(false);
+    }
+  };
+
+  const fetchJoinRequests = async () => {
+    if (!groupId) return;
+
+    setLoadingRequests(true);
+    try {
+      const response = await groupsApi.getJoinRequests(groupId);
+      if (response.success && response.data) {
+        setJoinRequests((response.data.requests as any[]) || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch join requests:", error);
+    } finally {
+      setLoadingRequests(false);
+    }
+  };
 
   // Fetch roles when Roles section is active (refresh roles list)
   useEffect(() => {
@@ -284,7 +320,12 @@ const ConfigureGroupPage = () => {
       }
     };
 
-    fetchRoles();
+    if (activeSection === "Members") {
+      fetchMembers();
+      fetchJoinRequests();
+    } else if (activeSection === "Roles") {
+      fetchRoles();
+    }
   }, [groupId, activeSection]);
 
   // Helper function to get role name by ID
@@ -292,6 +333,70 @@ const ConfigureGroupPage = () => {
     if (!roleId) return "Unknown";
     const role = roles.find(r => r.id === roleId);
     return role ? role.name : "Unknown";
+  };
+
+  // Handle accept join request
+  const handleAcceptRequest = async (requestId: string) => {
+    if (!groupId) return;
+
+    try {
+      const response = await groupsApi.acceptJoinRequest(groupId, requestId);
+      if (response.success) {
+        setSuccessMessage({
+          title: "Success",
+          message: "Join request accepted successfully!",
+        });
+        setShowSuccessModal(true);
+        // Refresh both lists
+        fetchJoinRequests();
+        fetchMembers();
+      } else {
+        setSuccessMessage({
+          title: "Error",
+          message: response.error || "Failed to accept join request",
+        });
+        setShowSuccessModal(true);
+      }
+    } catch (error) {
+      console.error("Error accepting join request:", error);
+      setSuccessMessage({
+        title: "Error",
+        message: "Failed to accept join request",
+      });
+      setShowSuccessModal(true);
+    }
+  };
+
+  // Handle reject join request
+  const handleRejectRequest = async (requestId: string) => {
+    if (!groupId) return;
+
+    if (!confirm("Are you sure you want to reject this join request?")) return;
+
+    try {
+      const response = await groupsApi.rejectJoinRequest(groupId, requestId);
+      if (response.success) {
+        setSuccessMessage({
+          title: "Success",
+          message: "Join request rejected successfully!",
+        });
+        setShowSuccessModal(true);
+        fetchJoinRequests();
+      } else {
+        setSuccessMessage({
+          title: "Error",
+          message: response.error || "Failed to reject join request",
+        });
+        setShowSuccessModal(true);
+      }
+    } catch (error) {
+      console.error("Error rejecting join request:", error);
+      setSuccessMessage({
+        title: "Error",
+        message: "Failed to reject join request",
+      });
+      setShowSuccessModal(true);
+    }
   };
 
   // Handle role assignment confirmation
@@ -513,7 +618,6 @@ const ConfigureGroupPage = () => {
     try {
       const response = await groupsApi.updateGroupSettings(groupId, {
         manualApproval,
-        verificationLevel,
         accountAgeRequirement: accountAge,
       });
 
@@ -885,7 +989,14 @@ const ConfigureGroupPage = () => {
                 Configure {groupName}
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                By Modern_Chris · Group Funds: ◈ 0
+                By{" "}
+                <a
+                  href={`/profile/${groupData?.owner_username}`}
+                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  {groupData?.owner_display_name || groupData?.owner_username || "Loading..."}
+                </a>
+                {" · Group Funds: ◈ 0"}
               </p>
             </div>
             <Link href={`/groups/${groupId}`}>
@@ -1161,89 +1272,6 @@ const ConfigureGroupPage = () => {
                           enabled={manualApproval}
                           onChange={setManualApproval}
                         />
-                      </div>
-                    </div>
-
-                    {/* Verification Level */}
-                    <div className="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg p-5">
-                      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                        Verification Level
-                      </h3>
-                      <div className="space-y-3">
-                        <label className="flex items-start gap-3 cursor-pointer group">
-                          <input
-                            type="radio"
-                            name="verification"
-                            checked={verificationLevel === "none"}
-                            onChange={() => setVerificationLevel("none")}
-                            className="mt-1 w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                          />
-                          <div className="flex-1">
-                            <div className="font-semibold text-gray-900 dark:text-gray-100">
-                              None
-                            </div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">
-                              Users do not require account verification before
-                              joining
-                            </div>
-                          </div>
-                        </label>
-
-                        <label className="flex items-start gap-3 cursor-pointer group">
-                          <input
-                            type="radio"
-                            name="verification"
-                            checked={verificationLevel === "low"}
-                            onChange={() => setVerificationLevel("low")}
-                            className="mt-1 w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                          />
-                          <div className="flex-1">
-                            <div className="font-semibold text-gray-900 dark:text-gray-100">
-                              Low
-                            </div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">
-                              Users must be phone, email, or ID verified before
-                              joining
-                            </div>
-                          </div>
-                        </label>
-
-                        <label className="flex items-start gap-3 cursor-pointer group">
-                          <input
-                            type="radio"
-                            name="verification"
-                            checked={verificationLevel === "medium"}
-                            onChange={() => setVerificationLevel("medium")}
-                            className="mt-1 w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                          />
-                          <div className="flex-1">
-                            <div className="font-semibold text-gray-900 dark:text-gray-100">
-                              Medium
-                            </div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">
-                              Users must be ID verified, or phone and email
-                              verified before joining
-                            </div>
-                          </div>
-                        </label>
-
-                        <label className="flex items-start gap-3 cursor-pointer group">
-                          <input
-                            type="radio"
-                            name="verification"
-                            checked={verificationLevel === "high"}
-                            onChange={() => setVerificationLevel("high")}
-                            className="mt-1 w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                          />
-                          <div className="flex-1">
-                            <div className="font-semibold text-gray-900 dark:text-gray-100">
-                              High
-                            </div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">
-                              Users must be ID verified before joining
-                            </div>
-                          </div>
-                        </label>
                       </div>
                     </div>
 
@@ -1763,14 +1791,78 @@ const ConfigureGroupPage = () => {
                     {/* Requests Tab */}
                     {membersTab === "requests" && (
                       <div className="space-y-4">
-                        <div className="text-center py-12">
-                          <p className="text-gray-600 dark:text-gray-400">
-                            No pending requests
-                          </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-                            Join requests will appear here when manual approval is enabled
-                          </p>
-                        </div>
+                        {loadingRequests ? (
+                          <div className="flex items-center justify-center py-12">
+                            <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400" />
+                            <span className="ml-3 text-gray-600 dark:text-gray-400">
+                              Loading requests...
+                            </span>
+                          </div>
+                        ) : joinRequests.length > 0 ? (
+                          <div className="space-y-3">
+                            {joinRequests.map((request) => (
+                              <div
+                                key={request.id}
+                                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                              >
+                                <div className="flex items-center gap-4">
+                                  <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0 relative">
+                                    <Image
+                                      src={request.avatar_url || `https://robohash.org/${request.username}?set=set3`}
+                                      alt={request.display_name || request.username}
+                                      fill
+                                      className="object-cover"
+                                      sizes="48px"
+                                    />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <a
+                                        href={`/profile/${request.username}`}
+                                        className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                                      >
+                                        {request.display_name || request.username}
+                                      </a>
+                                    </div>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                      Requested {new Date(request.requested_at).toLocaleDateString("en-US", {
+                                        month: "short",
+                                        day: "numeric",
+                                        year: "numeric",
+                                      })}
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                      Account age: {Math.floor((Date.now() - new Date(request.user_created_at).getTime()) / (1000 * 60 * 60 * 24))} days
+                                    </p>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => handleAcceptRequest(request.id)}
+                                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded transition-colors"
+                                    >
+                                      Accept
+                                    </button>
+                                    <button
+                                      onClick={() => handleRejectRequest(request.id)}
+                                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded transition-colors"
+                                    >
+                                      Reject
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-12">
+                            <p className="text-gray-600 dark:text-gray-400">
+                              No pending requests
+                            </p>
+                            <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                              Join requests will appear here when manual approval is enabled
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

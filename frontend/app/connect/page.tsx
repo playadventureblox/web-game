@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Search, HelpCircle, MoreHorizontal, Check, X } from "lucide-react";
@@ -10,7 +10,7 @@ import Sidebar from "../components/Sidebar";
 import { friendsApi, usersApi } from "@/lib/api";
 import { useRealtime } from "@/contexts/RealtimeContext";
 
-const ConnectPage = () => {
+function ConnectPageContent() {
   const searchParams = useSearchParams();
   const tabFromUrl = searchParams.get('tab');
   const [searchQuery, setSearchQuery] = useState("");
@@ -435,6 +435,16 @@ const ConnectPage = () => {
       <Footer />
     </div>
   );
-};
+}
 
-export default ConnectPage;
+export default function ConnectPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-gray-600 dark:text-gray-400">Loading...</div>
+      </div>
+    }>
+      <ConnectPageContent />
+    </Suspense>
+  );
+}

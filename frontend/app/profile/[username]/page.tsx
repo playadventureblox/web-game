@@ -19,9 +19,10 @@ import Footer from "../../components/Footer";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import VerifiedBadge from "../../components/VerifiedBadge";
-import { usersApi, friendsApi } from "@/lib/api";
+import { usersApi, friendsApi, groupsApi } from "@/lib/api";
 import { useParams } from "next/navigation";
 import { useUserPresence } from "@/hooks/useUserPresence";
+import { supabase } from "@/lib/supabase";
 
 interface UserProfile {
   id?: string;
@@ -63,6 +64,8 @@ const ProfilePage = () => {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [friends, setFriends] = useState<any[]>([]);
+  const [groups, setGroups] = useState<any[]>([]);
+  const [loadingGroups, setLoadingGroups] = useState(true);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
   
   // Relationship state
@@ -210,25 +213,58 @@ const ProfilePage = () => {
   ];
 
 
-  // Groups
-  const groups = [
-    {
-      id: 1,
-      name: "Building Roleplaying Fan ...",
-      image: "https://robohash.org/buildingrp?set=set3",
-      members: "5,036,909",
-      rank: "Owner",
-      verified: false,
-    },
-    {
-      id: 2,
-      name: "DuckXander",
-      image: "https://robohash.org/duckxander?set=set3",
-      members: "209,684",
-      rank: "Duckies",
-      verified: true,
-    },
-  ];
+  // Fetch groups when profile loads and setup real-time updates
+  useEffect(() => {
+    const fetchGroups = async () => {
+      if (!profileUser?.id) return;
+      
+      setLoadingGroups(true);
+      try {
+        const response = await groupsApi.getUserGroups();
+        if (response.success && response.data) {
+          const userGroups = (response.data.groups || []).map((group: any) => ({
+            id: group.id,
+            name: group.name,
+            image: group.icon_url || `https://robohash.org/${group.name}?set=set3`,
+            members: group.member_count?.toLocaleString() || '0',
+            rank: group.role || 'Member',
+            verified: group.is_verified || false,
+          }));
+          setGroups(userGroups);
+        }
+      } catch (error) {
+        console.error('Error fetching groups:', error);
+      } finally {
+        setLoadingGroups(false);
+      }
+    };
+
+    fetchGroups();
+
+    // Setup real-time subscription for group membership changes
+    if (!profileUser?.id) return;
+
+    const channel = supabase
+      .channel('profile-groups-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'group_members',
+          filter: `userId=eq.${profileUser.id}`,
+        },
+        () => {
+          // Refetch groups when membership changes
+          fetchGroups();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profileUser?.id]);
 
   const [groupsViewMode, setGroupsViewMode] = useState<"carousel" | "grid">(
     "carousel",
@@ -1222,6 +1258,7 @@ const ProfilePage = () => {
               </div>
 
               {/* Groups */}
+              {!loadingGroups && groups.length > 0 && (
               <div className="py-6 border-b border-gray-200 dark:border-gray-800">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
@@ -1394,6 +1431,7 @@ const ProfilePage = () => {
                   </div>
                 )}
               </div>
+              )}
 
               {/* Favorites */}
               <div className="py-6 border-b border-gray-200 dark:border-gray-800">

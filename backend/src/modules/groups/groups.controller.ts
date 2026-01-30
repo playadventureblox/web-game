@@ -198,6 +198,21 @@ export const createGroup = async (req: AuthRequest, res: Response) => {
         [memberId, group.id, userId, ownerRoleId],
       );
       console.log("Creator added to group successfully");
+
+      // Create group_settings entry with manual approval based on joinSetting
+      const manualApproval = joinSetting === 'approval';
+      console.log("Creating group settings with manual_approval:", manualApproval);
+      await db.query(
+        `INSERT INTO group_settings (
+          "groupId",
+          manual_approval,
+          account_age_requirement,
+          "createdAt",
+          "updatedAt"
+        ) VALUES ($1, $2, $3, NOW(), NOW())`,
+        [group.id, manualApproval, 'none'],
+      );
+      console.log("Group settings created successfully");
     } catch (roleError: any) {
       console.error("Error creating roles or adding member:", roleError);
       // Rollback: delete the group since role creation failed

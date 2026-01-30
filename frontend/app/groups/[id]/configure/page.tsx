@@ -225,8 +225,14 @@ const ConfigureGroupPage = () => {
         const settingsResponse = await groupsApi.getGroupSettings(groupId);
         if (settingsResponse.success && settingsResponse.data) {
           const settings = settingsResponse.data.settings as any;
-          setManualApproval(settings.manual_approval || false);
+          const manualApprovalValue = settings.manual_approval || false;
+          setManualApproval(manualApprovalValue);
           setAccountAge(settings.account_age_requirement || "none");
+          
+          // Sync joinSetting with manual approval
+          if (manualApprovalValue && joinSetting === "open") {
+            setJoinSetting("approval");
+          }
         }
 
         // Fetch social links
@@ -608,6 +614,28 @@ const ConfigureGroupPage = () => {
       setShowSuccessModal(true);
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Handle manual approval toggle change
+  const handleManualApprovalChange = (value: boolean) => {
+    setManualApproval(value);
+    // Sync with joinSetting dropdown
+    if (value && joinSetting === "open") {
+      setJoinSetting("approval");
+    } else if (!value && joinSetting === "approval") {
+      setJoinSetting("open");
+    }
+  };
+
+  // Handle joinSetting dropdown change
+  const handleJoinSettingChange = (value: string) => {
+    setJoinSetting(value);
+    // Sync with manual approval toggle
+    if (value === "approval") {
+      setManualApproval(true);
+    } else if (value === "open") {
+      setManualApproval(false);
     }
   };
 
@@ -1220,7 +1248,7 @@ const ConfigureGroupPage = () => {
                         </label>
                         <select
                           value={joinSetting}
-                          onChange={(e) => setJoinSetting(e.target.value)}
+                          onChange={(e) => handleJoinSettingChange(e.target.value)}
                           className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="open">Anyone can join</option>
@@ -1270,7 +1298,7 @@ const ConfigureGroupPage = () => {
                         </div>
                         <ToggleSwitch
                           enabled={manualApproval}
-                          onChange={setManualApproval}
+                          onChange={handleManualApprovalChange}
                         />
                       </div>
                     </div>

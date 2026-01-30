@@ -211,7 +211,7 @@ export const acceptFriendRequest = async (req: AuthRequest, res: Response) => {
     );
     
     if (senderResult.rows.length > 0) {
-      const senderId = senderResult.rows[0].senderId;
+      const senderId = senderResult.rows[0].senderId as string;
       try {
         await createNotification(
           senderId,

@@ -618,6 +618,100 @@ export const unfollowUser = async (req: Request, res: Response) => {
 };
 
 /**
+ * @route   GET /api/v1/users/following
+ * @desc    Get list of users the current user is following
+ * @access  Private
+ */
+export const getFollowing = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const result = await db.query(
+      `SELECT 
+        u.id,
+        u.username,
+        u."displayName" as display_name,
+        u."avatarUrl" as avatar_url,
+        u."isVerified" as is_verified,
+        u."presenceStatus" as presence_status,
+        f."createdAt" as followed_at
+      FROM followers f
+      JOIN users u ON f."followingId" = u.id
+      WHERE f."followerId" = $1 AND u."isBanned" = false
+      ORDER BY f."createdAt" DESC`,
+      [userId]
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        following: result.rows,
+      },
+    });
+  } catch (error) {
+    console.error("Get following error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+/**
+ * @route   GET /api/v1/users/followers
+ * @desc    Get list of users following the current user
+ * @access  Private
+ */
+export const getFollowers = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const result = await db.query(
+      `SELECT 
+        u.id,
+        u.username,
+        u."displayName" as display_name,
+        u."avatarUrl" as avatar_url,
+        u."isVerified" as is_verified,
+        u."presenceStatus" as presence_status,
+        f."createdAt" as followed_at
+      FROM followers f
+      JOIN users u ON f."followerId" = u.id
+      WHERE f."followingId" = $1 AND u."isBanned" = false
+      ORDER BY f."createdAt" DESC`,
+      [userId]
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        followers: result.rows,
+      },
+    });
+  } catch (error) {
+    console.error("Get followers error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+/**
  * @route   GET /api/v1/users/:userId/relationship
  * @desc    Get relationship status with a user (friend, following, etc.)
  * @access  Private

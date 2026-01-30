@@ -6,6 +6,8 @@ import {
   updateProfileSettings,
   followUser,
   unfollowUser,
+  getFollowing,
+  getFollowers,
   getRelationship,
 } from './users.controller.js';
 import { verifyToken, optionalAuth } from '../../middleware/auth.middleware.js';
@@ -32,6 +34,20 @@ router.put("/profile", verifyToken, updateProfile);
  * @access  Private
  */
 router.put("/profile/settings", verifyToken, updateProfileSettings);
+
+/**
+ * @route   GET /api/v1/users/following
+ * @desc    Get list of users the current user is following
+ * @access  Private
+ */
+router.get("/following", verifyToken, getFollowing);
+
+/**
+ * @route   GET /api/v1/users/followers
+ * @desc    Get list of users following the current user
+ * @access  Private
+ */
+router.get("/followers", verifyToken, getFollowers);
 
 /**
  * @route   POST /api/v1/users/:userId/follow

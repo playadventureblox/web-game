@@ -182,13 +182,49 @@ export const usersApi = {
     });
   },
 
+  // Get following list
+  getFollowing: async (): Promise<ApiResponse<{ following: any[] }>> => {
+    const token = storage.getAccessToken();
+    if (!token) {
+      return {
+        success: false,
+        message: "Not authenticated",
+      };
+    }
+
+    return apiCall("/users/following", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  // Get followers list
+  getFollowers: async (): Promise<ApiResponse<{ followers: any[] }>> => {
+    const token = storage.getAccessToken();
+    if (!token) {
+      return {
+        success: false,
+        message: "Not authenticated",
+      };
+    }
+
+    return apiCall("/users/followers", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
   // Follow a user
   followUser: async (userId: string): Promise<ApiResponse<unknown>> => {
     const token = storage.getAccessToken();
     if (!token) {
       return {
         success: false,
-        error: "No authentication token found",
+        message: "Not authenticated",
       };
     }
 

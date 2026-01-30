@@ -6,7 +6,7 @@ import { Search, HelpCircle, MoreHorizontal, Check, X } from "lucide-react";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
-import { friendsApi } from "@/lib/api";
+import { friendsApi, usersApi } from "@/lib/api";
 import { useRealtime } from "@/contexts/RealtimeContext";
 
 const ConnectPage = () => {
@@ -20,87 +20,12 @@ const ConnectPage = () => {
 
   // State for real API data
   const [friends, setFriends] = useState<any[]>([]);
+  const [following, setFollowing] = useState<any[]>([]);
+  const [followers, setFollowers] = useState<any[]>([]);
   const [receivedRequests, setReceivedRequests] = useState<any[]>([]);
   const [sentRequests, setSentRequests] = useState<any[]>([]);
 
 
-  const following = [
-    {
-      id: 1,
-      name: "GameDev123",
-      username: "@gamedev123",
-      status: "Online",
-      statusType: "online",
-      avatar: "https://robohash.org/gamedev?set=set3",
-    },
-    {
-      id: 2,
-      name: "BuilderPro",
-      username: "@builderpro",
-      status: "Offline",
-      statusType: "offline",
-      avatar: "https://robohash.org/builder?set=set3",
-    },
-    {
-      id: 3,
-      name: "CreativeStudio",
-      username: "@creative",
-      status: "Playing",
-      statusType: "online-game",
-      avatar: "https://robohash.org/creative?set=set3",
-    },
-    {
-      id: 4,
-      name: "PixelMaster",
-      username: "@pixelmaster",
-      status: "In Studio",
-      statusType: "studio",
-      avatar: "https://robohash.org/pixel?set=set3",
-    },
-  ];
-
-  const followers = [
-    {
-      id: 1,
-      name: "FanUser1",
-      username: "@fanuser1",
-      status: "Online",
-      statusType: "online",
-      avatar: "https://robohash.org/fan1?set=set3",
-    },
-    {
-      id: 2,
-      name: "FanUser2",
-      username: "@fanuser2",
-      status: "Offline",
-      statusType: "offline",
-      avatar: "https://robohash.org/fan2?set=set3",
-    },
-    {
-      id: 3,
-      name: "FanUser3",
-      username: "@fanuser3",
-      status: "Playing",
-      statusType: "online-game",
-      avatar: "https://robohash.org/fan3?set=set3",
-    },
-    {
-      id: 4,
-      name: "FanUser4",
-      username: "@fanuser4",
-      status: "In Studio",
-      statusType: "studio",
-      avatar: "https://robohash.org/fan4?set=set3",
-    },
-    {
-      id: 5,
-      name: "FanUser5",
-      username: "@fanuser5",
-      status: "Offline",
-      statusType: "offline",
-      avatar: "https://robohash.org/fan5?set=set3",
-    },
-  ];
 
 
   const tabs = ["Friends", "Following", "Followers", "Requests"];
@@ -130,6 +55,46 @@ const ConnectPage = () => {
           } else {
             setFriends([]);
           }
+        } else if (activeTab === "Following") {
+          const response = await usersApi.getFollowing();
+          if (response.success && response.data) {
+            const realFollowing = (response.data.following || []).map((user: any) => {
+              const presence = presenceMap.get(user.id);
+              const status = presence?.presenceStatus || 'offline';
+              return {
+                id: user.id,
+                name: user.display_name || user.username,
+                username: `@${user.username}`,
+                status: status === 'online' ? 'Online' : status === 'in-game' ? 'Playing' : 'Offline',
+                statusType: status,
+                avatar: user.avatar_url || `https://robohash.org/${user.username}?set=set3`,
+                isVerified: user.is_verified,
+              };
+            });
+            setFollowing(realFollowing);
+          } else {
+            setFollowing([]);
+          }
+        } else if (activeTab === "Followers") {
+          const response = await usersApi.getFollowers();
+          if (response.success && response.data) {
+            const realFollowers = (response.data.followers || []).map((user: any) => {
+              const presence = presenceMap.get(user.id);
+              const status = presence?.presenceStatus || 'offline';
+              return {
+                id: user.id,
+                name: user.display_name || user.username,
+                username: `@${user.username}`,
+                status: status === 'online' ? 'Online' : status === 'in-game' ? 'Playing' : 'Offline',
+                statusType: status,
+                avatar: user.avatar_url || `https://robohash.org/${user.username}?set=set3`,
+                isVerified: user.is_verified,
+              };
+            });
+            setFollowers(realFollowers);
+          } else {
+            setFollowers([]);
+          }
         } else if (activeTab === "Requests") {
           const response = await friendsApi.getFriendRequests();
           if (response.success && response.data) {
@@ -153,6 +118,8 @@ const ConnectPage = () => {
         console.error("Error fetching data:", error);
         // Set empty arrays on error
         if (activeTab === "Friends") setFriends([]);
+        if (activeTab === "Following") setFollowing([]);
+        if (activeTab === "Followers") setFollowers([]);
         if (activeTab === "Requests") setReceivedRequests([]);
       } finally {
         setIsLoading(false);

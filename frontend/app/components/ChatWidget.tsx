@@ -4,9 +4,9 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { MessageSquare, X, Settings, Minimize2, Send } from "lucide-react";
 import { messagesApi, friendsApi } from "@/lib/api";
-import { sendChatMessage, onChatMessage, offChatMessage, sendTypingIndicator, onTypingIndicator, offTypingIndicator, markMessagesAsRead } from "@/lib/chat";
-import { usePresence } from "@/contexts/PresenceContext";
-import type { ChatMessage } from "@/lib/chat";
+import { sendChatMessage, subscribeToMessages, unsubscribeFromMessages, markMessagesAsRead } from "@/lib/realtime";
+import { useRealtime } from "@/contexts/RealtimeContext";
+import type { ChatMessage } from "@/lib/realtime";
 
 interface Friend {
   id: string;
@@ -44,7 +44,7 @@ export default function ChatWidget() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [typingUsers, setTypingUsers] = useState<{ [key: string]: boolean }>({});
-  const { presenceMap } = usePresence();
+  const { presenceMap } = useRealtime();
   const messagesEndRef = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   // Load friends and conversations on mount
@@ -53,45 +53,43 @@ export default function ChatWidget() {
     loadConversations();
   }, []);
 
-  // Listen for incoming messages
+  // Subscribe to messages for open chats
   useEffect(() => {
-    const handleIncomingMessage = (message: ChatMessage) => {
-      // Add to open chat if exists
-      setOpenChats(prev => prev.map(chat => {
-        if (chat.id === message.sender_id) {
-          return {
-            ...chat,
-            messages: [...chat.messages, message]
-          };
-        }
-        return chat;
-      }));
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
 
-      // Update conversations list
-      loadConversations();
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const userId = payload.userId;
 
-      // Mark as read if chat is open
-      const isOpen = openChats.some(chat => chat.id === message.sender_id);
-      if (isOpen) {
+    // Subscribe to each open chat
+    openChats.forEach(chat => {
+      subscribeToMessages(userId, chat.id, (message: ChatMessage) => {
+        // Add to chat messages
+        setOpenChats(prev => prev.map(c => {
+          if (c.id === chat.id) {
+            return {
+              ...c,
+              messages: [...c.messages, message]
+            };
+          }
+          return c;
+        }));
+
+        // Update conversations list
+        loadConversations();
+
+        // Mark as read
         markMessagesAsRead(message.sender_id);
-      }
-    };
+      });
+    });
 
-    const handleTyping = (data: { userId: string; username: string; isTyping: boolean }) => {
-      setTypingUsers(prev => ({
-        ...prev,
-        [data.userId]: data.isTyping
-      }));
-    };
-
-    onChatMessage(handleIncomingMessage);
-    onTypingIndicator(handleTyping);
-
+    // Cleanup subscriptions
     return () => {
-      offChatMessage(handleIncomingMessage);
-      offTypingIndicator(handleTyping);
+      openChats.forEach(chat => {
+        unsubscribeFromMessages(userId, chat.id);
+      });
     };
-  }, [openChats]);
+  }, [openChats.map(c => c.id).join(',')]);
 
   const loadFriends = async () => {
     const response = await friendsApi.getFriends();
@@ -172,41 +170,34 @@ export default function ChatWidget() {
     delete messageInputs[chatId];
   };
 
-  const handleSendMessage = (chatId: string) => {
+  const handleSendMessage = async (chatId: string) => {
     const message = messageInputs[chatId];
     if (message && message.trim()) {
-      sendChatMessage(chatId, message.trim(), (response) => {
-        if (response.success && response.message) {
-          // Add message to chat
-          setOpenChats(prev => prev.map(chat => {
-            if (chat.id === chatId) {
-              return {
-                ...chat,
-                messages: [...chat.messages, response.message!]
-              };
-            }
-            return chat;
-          }));
-          
-          // Clear input
-          setMessageInputs({ ...messageInputs, [chatId]: "" });
-          
-          // Update conversations
-          loadConversations();
-        }
-      });
+      const response = await sendChatMessage(chatId, message.trim());
+      if (response.success && response.message) {
+        // Add message to chat
+        setOpenChats(prev => prev.map(chat => {
+          if (chat.id === chatId) {
+            return {
+              ...chat,
+              messages: [...chat.messages, response.message!]
+            };
+          }
+          return chat;
+        }));
+        
+        // Clear input
+        setMessageInputs({ ...messageInputs, [chatId]: "" });
+        
+        // Update conversations
+        loadConversations();
+      }
     }
   };
 
   const handleInputChange = (chatId: string, value: string) => {
     setMessageInputs({ ...messageInputs, [chatId]: value });
-    
-    // Send typing indicator
-    if (value.length > 0) {
-      sendTypingIndicator(chatId, true);
-    } else {
-      sendTypingIndicator(chatId, false);
-    }
+    // Typing indicators removed - can be added via Supabase Broadcast if needed
   };
 
   const formatTime = (dateString: string) => {

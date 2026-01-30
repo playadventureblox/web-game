@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "./components/ThemeProvider";
-import { PresenceProvider } from "@/contexts/PresenceContext";
+import { RealtimeProvider } from "@/contexts/RealtimeContext";
 import GlobalChatWidget from "./components/GlobalChatWidget";
 
 export const metadata: Metadata = {
@@ -23,10 +23,10 @@ export default function RootLayout({
           enableSystem={false}
           storageKey="adventureblox-theme"
         >
-          <PresenceProvider>
+          <RealtimeProvider>
             {children}
             <GlobalChatWidget />
-          </PresenceProvider>
+          </RealtimeProvider>
         </ThemeProvider>
       </body>
     </html>

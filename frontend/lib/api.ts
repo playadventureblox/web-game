@@ -255,13 +255,7 @@ export const usersApi = {
   },
 
   // Get relationship status with a user
-  getRelationship: async (userId: string): Promise<ApiResponse<{
-    isFriend: boolean;
-    friendRequestStatus: 'sent' | 'received' | null;
-    isFollowing: boolean;
-    isBestFriend: boolean;
-    isBlocked: boolean;
-  }>> => {
+  getRelationship: async (userId: string): Promise<ApiResponse<{ relationship: unknown }>> => {
     const token = storage.getAccessToken();
     if (!token) {
       return {
@@ -272,6 +266,69 @@ export const usersApi = {
 
     return apiCall(`/users/${userId}/relationship`, {
       method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  // Get user's social links
+  getUserSocialLinks: async (userId: string): Promise<ApiResponse<{ socialLinks: any[] }>> => {
+    return apiCall(`/users/social-links/${userId}`, {
+      method: "GET",
+    });
+  },
+
+  // Get current user's social links
+  getMySocialLinks: async (): Promise<ApiResponse<{ socialLinks: any[] }>> => {
+    const token = storage.getAccessToken();
+    if (!token) {
+      return {
+        success: false,
+        error: "No authentication token found",
+      };
+    }
+
+    return apiCall(`/users/social-links/me`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  // Add or update a social link
+  upsertSocialLink: async (platform: string, url: string): Promise<ApiResponse> => {
+    const token = storage.getAccessToken();
+    if (!token) {
+      return {
+        success: false,
+        error: "No authentication token found",
+      };
+    }
+
+    return apiCall(`/users/social-links`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ platform, url }),
+    });
+  },
+
+  // Delete a social link
+  deleteSocialLink: async (platform: string): Promise<ApiResponse> => {
+    const token = storage.getAccessToken();
+    if (!token) {
+      return {
+        success: false,
+        error: "No authentication token found",
+      };
+    }
+
+    return apiCall(`/users/social-links/${platform}`, {
+      method: "DELETE",
       headers: {
         Authorization: `Bearer ${token}`,
       },

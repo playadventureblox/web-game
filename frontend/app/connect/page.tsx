@@ -7,6 +7,7 @@ import Footer from "../components/Footer";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import { friendsApi } from "@/lib/api";
+import { useRealtime } from "@/contexts/RealtimeContext";
 
 const ConnectPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -15,6 +16,7 @@ const ConnectPage = () => {
   const [connectionSearch, setConnectionSearch] = useState("");
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { presenceMap } = useRealtime();
 
   // State for real API data
   const [friends, setFriends] = useState<any[]>([]);
@@ -112,14 +114,18 @@ const ConnectPage = () => {
           const response = await friendsApi.getFriends();
           if (response.success && response.data) {
             // Normalize API data to match UI format
-            const realFriends = (response.data.friends || []).map((friend: any) => ({
-              id: friend.id,
-              name: friend.display_name || friend.username,
-              username: `@${friend.username}`,
-              status: "Offline",
-              statusType: "offline",
-              avatar: friend.avatar_url || `https://robohash.org/${friend.username}?set=set3`,
-            }));
+            const realFriends = (response.data.friends || []).map((friend: any) => {
+              const presence = presenceMap.get(friend.id);
+              const status = presence?.presenceStatus || 'offline';
+              return {
+                id: friend.id,
+                name: friend.display_name || friend.username,
+                username: `@${friend.username}`,
+                status: status === 'online' ? 'Online' : status === 'in-game' ? 'Playing' : 'Offline',
+                statusType: status,
+                avatar: friend.avatar_url || `https://robohash.org/${friend.username}?set=set3`,
+              };
+            });
             setFriends(realFriends);
           } else {
             setFriends([]);
@@ -154,7 +160,7 @@ const ConnectPage = () => {
     };
 
     fetchData();
-  }, [activeTab]);
+  }, [activeTab, presenceMap]);
 
   // Handle accept friend request
   const handleAcceptRequest = async (requestId: string) => {
@@ -181,16 +187,20 @@ const ConnectPage = () => {
           setReceivedRequests(realRequests);
         }
         
-        // Update friends
+        // Update friends with presence
         if (friendsResponse.success && friendsResponse.data) {
-          const realFriends = (friendsResponse.data.friends || []).map((friend: any) => ({
-            id: friend.id,
-            name: friend.display_name || friend.username,
-            username: `@${friend.username}`,
-            status: "Offline",
-            statusType: "offline",
-            avatar: friend.avatar_url || `https://robohash.org/${friend.username}?set=set3`,
-          }));
+          const realFriends = (friendsResponse.data.friends || []).map((friend: any) => {
+            const presence = presenceMap.get(friend.id);
+            const status = presence?.presenceStatus || 'offline';
+            return {
+              id: friend.id,
+              name: friend.display_name || friend.username,
+              username: `@${friend.username}`,
+              status: status === 'online' ? 'Online' : status === 'in-game' ? 'Playing' : 'Offline',
+              statusType: status,
+              avatar: friend.avatar_url || `https://robohash.org/${friend.username}?set=set3`,
+            };
+          });
           setFriends(realFriends);
         }
       }

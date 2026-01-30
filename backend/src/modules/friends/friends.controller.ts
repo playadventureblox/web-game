@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import db from "../../lib/db.js";
 import { createNotification } from "../notifications/notifications.controller.js";
 import { AuthRequest } from '../../middleware/auth.middleware.js';

@@ -91,6 +91,7 @@ const GroupDetailPage = () => {
   const [alliances, setAlliances] = useState<
     Array<{
       id: string;
+      allied_group_id: string;
       allied_group_name: string;
       allied_group_icon?: string;
       allied_group_member_count: number;
@@ -1260,7 +1261,7 @@ const GroupDetailPage = () => {
                   {alliances.map((alliance) => (
                     <Link
                       key={alliance.id}
-                      href={`/groups/${alliance.id}`}
+                      href={`/groups/${alliance.allied_group_id}`}
                       className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
                     >
                       <div className="aspect-square bg-gray-100 dark:bg-gray-700 overflow-hidden relative">

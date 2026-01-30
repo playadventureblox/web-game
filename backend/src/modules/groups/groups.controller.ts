@@ -641,10 +641,17 @@ export const joinGroup = async (req: AuthRequest, res: Response) => {
           message: "You already have a pending join request for this group",
         });
       } else if (request.status === 'rejected') {
-        return res.status(403).json({
-          success: false,
-          message: "Your join request was rejected. Please contact the group owner.",
-        });
+        // Allow user to request again, but delete the old rejected request first
+        await db.query(
+          'DELETE FROM group_join_requests WHERE "groupId" = $1 AND "userId" = $2',
+          [id, userId],
+        );
+      } else if (request.status === 'approved') {
+        // Delete old approved request (user was kicked/left and is rejoining)
+        await db.query(
+          'DELETE FROM group_join_requests WHERE "groupId" = $1 AND "userId" = $2',
+          [id, userId],
+        );
       }
     }
 

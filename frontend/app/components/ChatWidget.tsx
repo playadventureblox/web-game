@@ -123,14 +123,15 @@ export default function ChatWidget() {
     }
   };
 
-  const filteredConversations = conversations.filter(conv => 
-    conv.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    conv.display_name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Merge conversations and friends into one unified list
+  const allContacts = [
+    ...conversations.map(conv => ({ ...conv, type: 'conversation' as const })),
+    ...friends.filter(friend => !conversations.some(conv => conv.id === friend.id)).map(friend => ({ ...friend, type: 'friend' as const }))
+  ];
 
-  const filteredFriends = friends.filter(friend => 
-    friend.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    friend.display_name?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredContacts = allContacts.filter(contact => 
+    contact.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    contact.display_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const openChatWindow = (conv: Conversation) => {
@@ -257,110 +258,69 @@ export default function ChatWidget() {
             </div>
           </div>
 
-          {/* Conversations & Friends List */}
+          {/* Unified Contacts List */}
           <div className="flex-1 overflow-y-auto">
-            {/* Conversations Section */}
-            {filteredConversations.length > 0 && (
-              <>
-                <div className="px-3 py-2 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                  <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Recent Chats</p>
-                </div>
-                {filteredConversations.map((conv) => (
-                  <button
-                    key={conv.id}
-                    onClick={() => openChatWindow(conv)}
-                    className="w-full flex items-center gap-3 p-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700"
-                  >
-                    <div className="relative flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600">
-                        <Image
-                          src={conv.avatar_url || `https://robohash.org/${conv.username}?set=set3`}
-                          alt={conv.username}
-                          width={40}
-                          height={40}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      {getPresenceStatus(conv.id) !== 'offline' && (
-                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
-                      )}
-                      {(conv.unread_count || 0) > 0 && (
-                        <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                          {conv.unread_count}
-                        </div>
-                      )}
+          {filteredContacts.length > 0 ? (
+            filteredContacts.map((contact) => {
+              const isConversation = contact.type === 'conversation';
+              return (
+                <button
+                  key={contact.id}
+                  onClick={() => isConversation ? openChatWindow(contact) : openChatWindowFromFriend(contact)}
+                  className="w-full flex items-center gap-3 p-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700"
+                >
+                  <div className="relative flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600">
+                      <Image
+                        src={contact.avatar_url || `https://robohash.org/${contact.username}?set=set3`}
+                        alt={contact.username || 'User'}
+                        width={40}
+                        height={40}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
-                    <div className="flex-1 text-left min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
-                          {conv.display_name || conv.username}
-                        </p>
-                        {conv.last_message_time && (
-                          <span className="text-xs text-gray-500 dark:text-gray-400 ml-2 flex-shrink-0">
-                            {formatTime(conv.last_message_time)}
-                          </span>
-                        )}
+                    {getPresenceStatus(contact.id) !== 'offline' && (
+                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
+                    )}
+                    {isConversation && (contact.unread_count || 0) > 0 && (
+                      <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                        {contact.unread_count}
                       </div>
-                      {conv.last_message && (
-                        <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                          {conv.last_message}
-                        </p>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </>
-            )}
-
-            {/* Friends Section */}
-            {filteredFriends.length > 0 && (
-              <>
-                <div className="px-3 py-2 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                  <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Friends</p>
-                </div>
-                {filteredFriends.map((friend) => (
-                  <button
-                    key={friend.id}
-                    onClick={() => openChatWindowFromFriend(friend)}
-                    className="w-full flex items-center gap-3 p-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700"
-                  >
-                    <div className="relative flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600">
-                        <Image
-                          src={friend.avatar_url || `https://robohash.org/${friend.username}?set=set3`}
-                          alt={friend.username}
-                          width={40}
-                          height={40}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      {getPresenceStatus(friend.id) !== 'offline' && (
-                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
-                      )}
-                    </div>
-                    <div className="flex-1 text-left min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
-                          {friend.display_name || friend.username}
-                        </p>
-                      </div>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                        @{friend.username}
+                    )}
+                  </div>
+                  <div className="flex-1 text-left min-w-0">
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
+                        {contact.display_name || contact.username}
                       </p>
+                      {isConversation && contact.last_message_time && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-2 flex-shrink-0">
+                          {formatTime(contact.last_message_time)}
+                        </span>
+                      )}
                     </div>
-                  </button>
-                ))}
-              </>
-            )}
-
-            {/* Empty State */}
-            {filteredConversations.length === 0 && filteredFriends.length === 0 && (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">
-                {searchQuery ? 'No friends or conversations found' : 'No friends yet'}
-              </div>
-            )}
-          </div>
+                    {isConversation && contact.last_message ? (
+                      <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                        {contact.last_message}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {getPresenceStatus(contact.id) === 'online' ? 'Online' : getPresenceStatus(contact.id) === 'in-game' ? 'Playing' : 'Offline'}
+                      </p>
+                    )}
+                  </div>
+                </button>
+              );
+            })
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+              <MessageSquare className="w-12 h-12 text-gray-400 dark:text-gray-600 mb-3" />
+              <p className="text-sm text-gray-600 dark:text-gray-400">No contacts yet</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Start chatting with your friends!</p>
+            </div>
+          )}
         </div>
+      </div>
       )}
 
       {/* Individual Chat Windows */}

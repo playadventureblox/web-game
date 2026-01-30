@@ -225,6 +225,7 @@ const ProfilePage = () => {
           const userGroups = (response.data.groups || []).map((group: any) => ({
             id: group.id,
             name: group.name,
+            description: group.description || '',
             image: group.icon_url || `https://robohash.org/${group.name}?set=set3`,
             members: group.member_count?.toLocaleString() || '0',
             rank: group.role || 'Member',
@@ -1339,13 +1340,11 @@ const ProfilePage = () => {
                               )}
                             </h3>
 
-                            <p className="text-base text-gray-600 dark:text-gray-400 mb-4">
-                              😊 Welcome to our group!
-                            </p>
-
-                            <p className="text-base text-gray-600 dark:text-gray-400 mb-4">
-                              🎮 Join our group to support us!
-                            </p>
+                            {group.description && (
+                              <p className="text-base text-gray-600 dark:text-gray-400 mb-4 whitespace-pre-line">
+                                {group.description}
+                              </p>
+                            )}
 
                             <div className="grid grid-cols-2 gap-6 mt-6">
                               <div>

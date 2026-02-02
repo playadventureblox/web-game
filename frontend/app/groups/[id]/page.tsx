@@ -500,7 +500,7 @@ const GroupDetailPage = () => {
               Groups
             </h2>
             <Link
-              href="/groups"
+              href="/groups?discover=true"
               className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
             >
               See All

@@ -10,6 +10,7 @@ import Header from "../components/Header";
 import ProtectedRoute from "../components/ProtectedRoute";
 import VerifiedBadge from "../components/VerifiedBadge";
 import { usersApi, friendsApi } from "@/lib/api";
+import { useRealtime } from "@/contexts/RealtimeContext";
 
 const HomePage = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -18,6 +19,7 @@ const HomePage = () => {
   const [showRightAd, setShowRightAd] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [friends, setFriends] = useState<any[]>([]);
+  const { presenceMap } = useRealtime();
 
   // Fetch user data and friends
   useEffect(() => {
@@ -38,7 +40,6 @@ const HomePage = () => {
             name: friend.display_name || friend.username,
             username: friend.username,
             avatar: friend.avatar_url || `https://robohash.org/${friend.username}?set=set3`,
-            status: "offline", // TODO: Add real-time presence
           }));
           setFriends(realFriends);
         }
@@ -192,42 +193,41 @@ const HomePage = () => {
                 </Link>
 
                 {/* Friends */}
-                {friends.map((friend) => (
-                  <Link
-                    key={friend.id}
-                    href={`/profile/${friend.username}`}
-                    className="flex flex-col items-center gap-2 cursor-pointer hover:opacity-80"
-                  >
-                    <div className="relative">
-                      <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-700 relative">
-                        <Image
-                          src={friend.avatar}
-                          alt={friend.name}
-                          fill
-                          className="object-cover"
-                        />
+                {friends.map((friend) => {
+                  const presence = presenceMap.get(friend.id);
+                  const status = presence?.presenceStatus || 'offline';
+                  const isOnline = status === 'online' || status === 'in-game';
+                  
+                  return (
+                    <Link
+                      key={friend.id}
+                      href={`/profile/${friend.username}`}
+                      className="flex flex-col items-center gap-2 cursor-pointer hover:opacity-80"
+                    >
+                      <div className="relative">
+                        <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-700 relative">
+                          <Image
+                            src={friend.avatar}
+                            alt={friend.name}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                        {/* Status Dot - Online indicator */}
+                        {isOnline && (
+                          <div
+                            className="absolute w-5 h-5 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"
+                            style={{ bottom: "-2.5px", right: "-2.5px" }}
+                            title={status === 'in-game' ? 'Playing' : 'Online'}
+                          />
+                        )}
                       </div>
-                      {/* Status Dot - 50% overlap positioned outside */}
-                      {friend.status && friend.status !== "offline" && (
-                        <div
-                          className={`absolute w-5 h-5 rounded-full border-2 border-white dark:border-gray-900 ${
-                            friend.status === "online-game"
-                              ? "bg-green-500"
-                              : friend.status === "online"
-                                ? "bg-blue-500"
-                                : friend.status === "studio"
-                                  ? "bg-orange-500"
-                                  : "bg-gray-400"
-                          }`}
-                          style={{ bottom: "-2.5px", right: "-2.5px" }}
-                        />
-                      )}
-                    </div>
-                    <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">
-                      {friend.name}
-                    </p>
-                  </Link>
-                ))}
+                      <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                        {friend.name}
+                      </p>
+                    </Link>
+                  );
+                })}
               </div>
             </section>
 

@@ -40,20 +40,24 @@ const GroupsPage = () => {
       setError("");
 
       try {
+        // Check if user intentionally navigated here (via See All button)
+        const urlParams = new URLSearchParams(window.location.search);
+        const isIntentional = urlParams.get('discover') === 'true';
+
         // Fetch user's groups (groups they own or are a member of)
         const userGroupsResponse = await groupsApi.getUserGroups();
         if (userGroupsResponse.success && userGroupsResponse.data) {
           const groups = (userGroupsResponse.data.groups as Group[]) || [];
           setUserGroups(groups);
           
-          // If user has groups, redirect to first group details page
-          if (groups.length > 0) {
+          // Only redirect if user has groups AND didn't intentionally come to discover page
+          if (groups.length > 0 && !isIntentional) {
             router.push(`/groups/${groups[0].id}`);
             return;
           }
         }
 
-        // Only fetch all groups if user has no groups (discovery mode)
+        // Fetch all groups for discovery mode
         const allGroupsResponse = await groupsApi.getAllGroups({
           page: 1,
           limit: 20,

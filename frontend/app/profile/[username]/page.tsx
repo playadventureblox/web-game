@@ -133,18 +133,7 @@ const ProfilePage = () => {
           }
         }
         
-        // Fetch friends list (of the profile being viewed)
-        const friendsResponse = await friendsApi.getFriends();
-        if (friendsResponse.success && friendsResponse.data) {
-          const realFriends = (friendsResponse.data.friends || []).map((friend: any) => ({
-            id: friend.id,
-            name: friend.display_name || friend.username,
-            username: `@${friend.username}`,
-            avatar: friend.avatar_url || `https://robohash.org/${friend.username}?set=set3`,
-            status: "offline", // TODO: Real-time presence
-          }));
-          setFriends(realFriends);
-        }
+        // Note: Friends list will be fetched separately after profileUser is set
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -214,6 +203,34 @@ const ProfilePage = () => {
   ];
 
 
+  // Fetch friends when profile loads
+  useEffect(() => {
+    const fetchFriends = async () => {
+      if (!profileUser?.id) return;
+      
+      try {
+        const friendsResponse = isOwnProfile 
+          ? await friendsApi.getFriends()
+          : await friendsApi.getUserFriends(profileUser.id);
+          
+        if (friendsResponse.success && friendsResponse.data) {
+          const realFriends = (friendsResponse.data.friends || []).map((friend: any) => ({
+            id: friend.id,
+            name: friend.display_name || friend.username,
+            username: `@${friend.username}`,
+            avatar: friend.avatar_url || `https://robohash.org/${friend.username}?set=set3`,
+            status: "offline", // Real-time presence handled separately
+          }));
+          setFriends(realFriends);
+        }
+      } catch (error) {
+        console.error('Error fetching friends:', error);
+      }
+    };
+
+    fetchFriends();
+  }, [profileUser?.id, isOwnProfile]);
+
   // Fetch groups when profile loads and setup real-time updates
   useEffect(() => {
     const fetchGroups = async () => {
@@ -221,7 +238,10 @@ const ProfilePage = () => {
       
       setLoadingGroups(true);
       try {
-        const response = await groupsApi.getUserGroups();
+        const response = isOwnProfile
+          ? await groupsApi.getUserGroups()
+          : await groupsApi.getGroupsForUser(profileUser.id);
+          
         if (response.success && response.data) {
           const userGroups = (response.data.groups || []).map((group: any) => ({
             id: group.id,

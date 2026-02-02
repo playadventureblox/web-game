@@ -5,6 +5,7 @@ import {
   declineFriendRequest,
   removeFriend,
   getFriends,
+  getUserFriends,
   getFriendRequests,
   addBestFriend,
   removeBestFriend,
@@ -17,7 +18,10 @@ import { authMiddleware } from '../../middleware/auth.middleware.js';
 
 const router = Router();
 
-// All routes require authentication
+// Public route - Get specific user's friends
+router.get("/user/:userId", getUserFriends);
+
+// All other routes require authentication
 router.use(authMiddleware);
 
 // Friend requests

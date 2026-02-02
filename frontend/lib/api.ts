@@ -607,6 +607,13 @@ export const groupsApi = {
     });
   },
 
+  // Get groups for a specific user (public)
+  getGroupsForUser: async (userId: string): Promise<ApiResponse<{ groups: unknown[] }>> => {
+    return apiCall(`/groups/user/${userId}`, {
+      method: "GET",
+    });
+  },
+
   // Get group games
   getGroupGames: async (
     id: string,
@@ -1324,7 +1331,7 @@ export const friendsApi = {
     });
   },
 
-  // Get friends list
+  // Get friends list (current user)
   getFriends: async (): Promise<ApiResponse<{ friends: unknown[]; count: number }>> => {
     const token = storage.getAccessToken();
     if (!token) {
@@ -1339,6 +1346,13 @@ export const friendsApi = {
       headers: {
         Authorization: `Bearer ${token}`,
       },
+    });
+  },
+
+  // Get friends list for a specific user (public)
+  getUserFriends: async (userId: string): Promise<ApiResponse<{ friends: unknown[]; count: number }>> => {
+    return apiCall(`/friends/user/${userId}`, {
+      method: "GET",
     });
   },
 

@@ -420,6 +420,61 @@ export const getFriends = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * @route   GET /api/v1/friends/user/:userId
+ * @desc    Get friends list for a specific user (public)
+ * @access  Public
+ */
+export const getUserFriends = async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID is required",
+      });
+    }
+
+    console.log("getUserFriends called for userId:", userId);
+
+    const result = await db.query(
+      `SELECT 
+        u.id,
+        u.username,
+        u."displayName" as display_name,
+        u."isVerified" as is_verified,
+        u."lastLogin" as last_login,
+        p."avatarUrl" as avatar_url,
+        p."presenceStatus" as presence_status,
+        f."createdAt" as friends_since
+       FROM friendships f
+       JOIN users u ON f."friendId" = u.id
+       LEFT JOIN profiles p ON u.id = p."userId"
+       WHERE f."userId" = $1
+       ORDER BY u."displayName" ASC`,
+      [userId]
+    );
+
+    console.log(`Found ${result.rows.length} friends for user ${userId}`);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        friends: result.rows,
+        count: result.rows.length,
+      },
+    });
+  } catch (error) {
+    console.error("Get user friends error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: process.env.NODE_ENV === "development" ? error : undefined,
+    });
+  }
+};
+
+/**
  * @route   GET /api/v1/friends/requests
  * @desc    Get friend requests (sent and received)
  * @access  Private

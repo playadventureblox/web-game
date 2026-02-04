@@ -68,7 +68,7 @@ export default function MembersSection({ groupId }: MembersSectionProps) {
     return selectedRole === "all" || member.role_id === selectedRole;
   });
   return (
-    <div className="p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+    <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700 mb-4">
       <div className="flex flex-col gap-3 mb-3">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
@@ -154,16 +154,16 @@ export default function MembersSection({ groupId }: MembersSectionProps) {
               href={`/profile/${member.username}`}
               className="group flex flex-col items-center"
             >
-              <div className="w-[100px] h-[100px] border border-gray-200 dark:border-gray-700 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800 relative">
+              <div className="w-[110px] h-[110px] border border-gray-200 dark:border-gray-700 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800 relative">
                 <Image
                   src={`https://robohash.org/${member.username}?set=set3`}
                   alt={member.display_name || member.username}
                   fill
                   className="object-cover group-hover:opacity-90 transition-opacity"
-                  sizes="100px"
+                  sizes="110px"
                 />
               </div>
-              <p className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1 truncate w-[100px] text-center">
+              <p className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1 truncate w-[110px] text-center">
                 {member.display_name || member.username}
               </p>
             </a>

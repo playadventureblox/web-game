@@ -154,16 +154,16 @@ export default function MembersSection({ groupId }: MembersSectionProps) {
               href={`/profile/${member.username}`}
               className="group flex flex-col items-center"
             >
-              <div className="w-[80px] h-[80px] border border-gray-200 dark:border-gray-700 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800 relative">
+              <div className="w-[100px] h-[100px] border border-gray-200 dark:border-gray-700 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800 relative">
                 <Image
                   src={`https://robohash.org/${member.username}?set=set3`}
                   alt={member.display_name || member.username}
                   fill
                   className="object-cover group-hover:opacity-90 transition-opacity"
-                  sizes="80px"
+                  sizes="100px"
                 />
               </div>
-              <p className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1 truncate w-[80px] text-center">
+              <p className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1 truncate w-[100px] text-center">
                 {member.display_name || member.username}
               </p>
             </a>

@@ -463,7 +463,7 @@ const ProfilePage = () => {
   const [currentGroupIndex, setCurrentGroupIndex] = useState(0);
 
   // Groups carousel logic
-  const groupsPerPage = 1;
+  const groupsPerPage = 3;
   const maxGroupIndex = Math.max(0, groups.length - groupsPerPage);
   const visibleGroups = groups.slice(
     currentGroupIndex,
@@ -1525,43 +1525,41 @@ const ProfilePage = () => {
                   </div>
                 </div>
 
-                {/* Carousel View - BIG with game thumbnail */}
+                {/* Carousel View - Roblox Communities style (smaller horizontal row) */}
                 {groupsViewMode === "carousel" && (
-                  <div className="relative bg-gray-50 dark:bg-gray-800/30 rounded-lg p-6">
+                  <div className="relative">
                     {/* Left Arrow */}
                     {showPrevGroup && (
                       <button
                         onClick={handlePrevGroup}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-md"
+                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-md -ml-3"
                       >
-                        <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                        <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                       </button>
                     )}
 
-                    {/* Group Card - ONE at a time, BIG */}
-                    <div className="flex items-start gap-6">
+                    {/* Group Cards - Multiple per row, smaller */}
+                    <div className="grid grid-cols-3 gap-4">
                       {visibleGroups.map((group) => (
-                        <div
+                        <Link
                           key={group.id}
-                          className="flex items-start gap-6 w-full"
+                          href={`/groups/${group.id}`}
+                          className="block group/card"
                         >
-                          {/* Large Game Thumbnail */}
-                          <div className="w-64 h-64 rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0 relative">
+                          <div className="w-full aspect-square rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 relative">
                             <Image
                               src={group.image}
                               alt={group.name}
                               fill
-                              className="object-cover"
+                              className="object-cover group-hover/card:opacity-90 transition-opacity"
                             />
                           </div>
-
-                          {/* Group Info */}
-                          <div className="flex-1">
-                            <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2 mb-2">
+                          <div className="mt-2">
+                            <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1 truncate">
                               {group.name}
                               {group.verified && (
                                 <svg
-                                  className="w-5 h-5 text-blue-500"
+                                  className="w-3.5 h-3.5 text-blue-500 flex-shrink-0"
                                   fill="currentColor"
                                   viewBox="0 0 20 20"
                                 >
@@ -1573,33 +1571,11 @@ const ProfilePage = () => {
                                 </svg>
                               )}
                             </h3>
-
-                            {group.description && (
-                              <p className="text-base text-gray-600 dark:text-gray-400 mb-4 whitespace-pre-line">
-                                {group.description}
-                              </p>
-                            )}
-
-                            <div className="grid grid-cols-2 gap-6 mt-6">
-                              <div>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                  Members
-                                </p>
-                                <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                                  {group.members}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                  Rank
-                                </p>
-                                <p className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1">
-                                  👑 {group.rank}
-                                </p>
-                              </div>
-                            </div>
+                            <p className="text-xs text-gray-600 dark:text-gray-400">
+                              {group.members} Members
+                            </p>
                           </div>
-                        </div>
+                        </Link>
                       ))}
                     </div>
 
@@ -1607,9 +1583,9 @@ const ProfilePage = () => {
                     {showNextGroup && (
                       <button
                         onClick={handleNextGroup}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-md"
+                        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-md -mr-3"
                       >
-                        <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                        <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                       </button>
                     )}
                   </div>

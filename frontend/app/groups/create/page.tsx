@@ -54,7 +54,7 @@ const CreateGroupPage = () => {
     }
 
     if (!emblemFile) {
-      setError("Group emblem is required");
+      setError("Group icon is required");
       return;
     }
 
@@ -62,7 +62,7 @@ const CreateGroupPage = () => {
     setUploading(true);
 
     try {
-      // Upload emblem (icon) first
+      // Upload group icon first
       const emblemUploadResponse = await uploadApi.uploadImage(
         emblemFile,
         "icon",
@@ -70,7 +70,7 @@ const CreateGroupPage = () => {
 
       if (!emblemUploadResponse.success || !emblemUploadResponse.data) {
         setError(
-          emblemUploadResponse.message || "Failed to upload emblem image",
+          emblemUploadResponse.message || "Failed to upload group icon image",
         );
         setCreating(false);
         setUploading(false);
@@ -79,7 +79,7 @@ const CreateGroupPage = () => {
 
       const iconUrl = emblemUploadResponse.data.url;
 
-      // Upload cover photo if provided
+      // Upload group background if provided
       let coverPhotoUrl: string | undefined = undefined;
       if (coverPhotoFile) {
         const coverUploadResponse = await uploadApi.uploadImage(
@@ -89,7 +89,7 @@ const CreateGroupPage = () => {
 
         if (!coverUploadResponse.success || !coverUploadResponse.data) {
           setError(
-            coverUploadResponse.message || "Failed to upload cover photo",
+            coverUploadResponse.message || "Failed to upload group background",
           );
           setCreating(false);
           setUploading(false);
@@ -184,10 +184,10 @@ const CreateGroupPage = () => {
             </div>
           </div>
 
-          {/* Emblem */}
+          {/* Group Icon */}
           <div>
             <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-              Emblem<span className="text-red-500">*</span>
+              Group Icon<span className="text-red-500">*</span>
             </label>
             <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-8">
               <div className="flex items-start gap-6">
@@ -197,7 +197,7 @@ const CreateGroupPage = () => {
                     {emblemPreview ? (
                       <img
                         src={emblemPreview}
-                        alt="Emblem preview"
+                        alt="Group icon preview"
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -235,13 +235,13 @@ const CreateGroupPage = () => {
             </div>
           </div>
 
-          {/* Cover Photo */}
+          {/* Group Background */}
           <div>
             <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-              Cover Photo
+              Group Background
             </label>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-              Cover photo must be one of the available dimensions: 720x228,
+              Group background must be one of the available dimensions: 720x228,
               1440x456
             </p>
             <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-8">
@@ -252,7 +252,7 @@ const CreateGroupPage = () => {
                     {coverPhotoPreview ? (
                       <img
                         src={coverPhotoPreview}
-                        alt="Cover photo preview"
+                        alt="Group background preview"
                         className="w-full h-full object-cover"
                       />
                     ) : (

@@ -1,34 +1,208 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { CheckSquare } from "lucide-react";
+import Link from "next/link";
+import { Loader2, Send, ArrowLeft, Search, PenSquare } from "lucide-react";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
+import { messagesApi, searchApi } from "@/lib/api";
+
+interface Conversation {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar_url?: string;
+  presence_status?: string;
+  last_message?: string;
+  last_message_time?: string;
+  is_read?: boolean;
+  is_sender?: boolean;
+  unread_count?: number;
+}
+
+interface Message {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  content: string;
+  is_read: boolean;
+  created_at: string;
+  sender_username: string;
+  sender_display_name?: string;
+  sender_avatar_url?: string;
+}
 
 const MessagesPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("Inbox");
-  const [selectedAll, setSelectedAll] = useState(false);
 
-  // Mock messages data
-  const messages = [
-    {
-      id: 1,
-      sender: "AdventureBlox",
-      username: "@AdventureBlox",
-      subject: "Welcome to AdventureBlox!",
-      preview:
-        "Hello, and welcome to AdventureBlox—a platform for people all over the world to connect, shar...",
-      date: "Jun 6 | 11:05 AM",
-      verified: true,
-      avatar: "https://robohash.org/adventureblox?set=set3",
-    },
-  ];
+  // Conversations state
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loadingConversations, setLoadingConversations] = useState(true);
 
-  const tabs = ["Inbox", "Sent", "News", "Archive"];
+  // Active conversation / thread
+  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [messageText, setMessageText] = useState("");
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // New message compose
+  const [showCompose, setShowCompose] = useState(false);
+  const [recipientSearch, setRecipientSearch] = useState("");
+  const [recipientResults, setRecipientResults] = useState<any[]>([]);
+  const [searchingRecipient, setSearchingRecipient] = useState(false);
+  const [selectedRecipient, setSelectedRecipient] = useState<any | null>(null);
+  const [composeMessage, setComposeMessage] = useState("");
+  const [sendingCompose, setSendingCompose] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Fetch conversations
+  useEffect(() => {
+    const fetchConversations = async () => {
+      setLoadingConversations(true);
+      try {
+        const response = await messagesApi.getConversations();
+        if (response.success && response.data) {
+          setConversations((response.data.conversations as Conversation[]) || []);
+        }
+      } catch (error) {
+        console.error("Error fetching conversations:", error);
+      } finally {
+        setLoadingConversations(false);
+      }
+    };
+
+    fetchConversations();
+  }, []);
+
+  // Fetch messages for active conversation
+  useEffect(() => {
+    if (!activeConversation) return;
+
+    const fetchMessages = async () => {
+      setLoadingMessages(true);
+      try {
+        const response = await messagesApi.getMessages(activeConversation.id);
+        if (response.success && response.data) {
+          setMessages((response.data.messages as Message[]) || []);
+        }
+      } catch (error) {
+        console.error("Error fetching messages:", error);
+      } finally {
+        setLoadingMessages(false);
+      }
+    };
+
+    fetchMessages();
+  }, [activeConversation]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Recipient search with debounce
+  useEffect(() => {
+    if (recipientSearch.trim().length < 2) {
+      setRecipientResults([]);
+      return;
+    }
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      setSearchingRecipient(true);
+      try {
+        const response = await searchApi.searchUsers(recipientSearch, 6);
+        if (response.success && response.data) {
+          setRecipientResults((response.data.users as any[]) || []);
+        }
+      } catch (error) {
+        console.error("Search error:", error);
+      } finally {
+        setSearchingRecipient(false);
+      }
+    }, 300);
+
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, [recipientSearch]);
+
+  // Send message in thread
+  const handleSendMessage = async () => {
+    if (!activeConversation || !messageText.trim()) return;
+
+    setSendingMessage(true);
+    try {
+      const response = await messagesApi.sendMessage(activeConversation.id, messageText.trim());
+      if (response.success && response.data) {
+        setMessages((prev) => [...prev, response.data!.message as Message]);
+        setMessageText("");
+        // Update conversation list
+        const convResponse = await messagesApi.getConversations();
+        if (convResponse.success && convResponse.data) {
+          setConversations((convResponse.data.conversations as Conversation[]) || []);
+        }
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  // Send compose message
+  const handleSendCompose = async () => {
+    if (!selectedRecipient || !composeMessage.trim()) return;
+
+    setSendingCompose(true);
+    try {
+      const response = await messagesApi.sendMessage(selectedRecipient.id, composeMessage.trim());
+      if (response.success) {
+        // Refresh conversations and open the new thread
+        const convResponse = await messagesApi.getConversations();
+        if (convResponse.success && convResponse.data) {
+          const convs = (convResponse.data.conversations as Conversation[]) || [];
+          setConversations(convs);
+          const newConv = convs.find((c) => c.id === selectedRecipient.id);
+          if (newConv) {
+            setActiveConversation(newConv);
+          }
+        }
+        setShowCompose(false);
+        setSelectedRecipient(null);
+        setRecipientSearch("");
+        setComposeMessage("");
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+    } finally {
+      setSendingCompose(false);
+    }
+  };
+
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+    } else if (diffDays === 1) {
+      return "Yesterday";
+    } else if (diffDays < 7) {
+      return date.toLocaleDateString("en-US", { weekday: "short" });
+    }
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
@@ -43,123 +217,286 @@ const MessagesPage = () => {
       />
 
       {/* Main Content */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8">
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-8">
-          Messages
-        </h1>
-
-        {/* Tabs */}
-        <div className="flex gap-8 border-b border-gray-200 dark:border-gray-800 mb-6">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`pb-3 text-base font-semibold transition-colors relative ${
-                activeTab === tab
-                  ? "text-gray-900 dark:text-gray-100"
-                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-              }`}
-            >
-              {tab}
-              {activeTab === tab && (
-                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 dark:bg-gray-100" />
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-3 mb-6">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+            Messages
+          </h1>
           <button
-            onClick={() => setSelectedAll(!selectedAll)}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm"
+            onClick={() => { setShowCompose(true); setActiveConversation(null); }}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors text-sm"
           >
-            <CheckSquare className="w-4 h-4" />
-            All
-          </button>
-          <button className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">
-            Archive
-          </button>
-          <button className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">
-            Mark As Read
-          </button>
-          <button className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">
-            Mark As Unread
+            <PenSquare className="w-4 h-4" />
+            New Message
           </button>
         </div>
 
-        {/* Messages List */}
-        <div className="space-y-2">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className="flex items-start gap-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer border border-gray-200 dark:border-gray-700"
-            >
-              <input
-                type="checkbox"
-                className="mt-1 w-4 h-4 rounded border-gray-300 dark:border-gray-600"
-              />
-
-              <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-300 dark:bg-gray-600 flex-shrink-0 relative">
-                <Image
-                  src={message.avatar}
-                  alt={message.sender}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-bold text-gray-900 dark:text-gray-100">
-                    {message.sender}
-                  </span>
-                  {message.verified && (
-                    <svg
-                      className="w-4 h-4 text-blue-500"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" />
-                    </svg>
-                  )}
-                  <span className="text-gray-600 dark:text-gray-400 text-sm">
-                    {message.username}
-                  </span>
-                </div>
-                <p className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                  {message.subject}
-                </p>
-                <p className="text-gray-700 dark:text-gray-300 text-sm">
-                  {message.preview}
-                </p>
-              </div>
-
-              <span className="text-gray-600 dark:text-gray-400 text-sm whitespace-nowrap">
-                {message.date}
-              </span>
+        <div className="flex gap-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden min-h-[600px]">
+          {/* Conversations List (Left Panel) */}
+          <div className="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+            <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100">Conversations</h2>
             </div>
-          ))}
-        </div>
 
-        {/* Action Buttons (Bottom) */}
-        <div className="flex gap-3 mt-6">
-          <button
-            onClick={() => setSelectedAll(!selectedAll)}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm"
-          >
-            <CheckSquare className="w-4 h-4" />
-            All
-          </button>
-          <button className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">
-            Archive
-          </button>
-          <button className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">
-            Mark As Read
-          </button>
-          <button className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">
-            Mark As Unread
-          </button>
+            <div className="flex-1 overflow-y-auto">
+              {loadingConversations ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                </div>
+              ) : conversations.length === 0 ? (
+                <div className="text-center py-12 px-4">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">No conversations yet</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                    Send a message to start a conversation
+                  </p>
+                </div>
+              ) : (
+                conversations.map((conv) => (
+                  <button
+                    key={conv.id}
+                    onClick={() => { setActiveConversation(conv); setShowCompose(false); }}
+                    className={`w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700 ${
+                      activeConversation?.id === conv.id ? "bg-blue-50 dark:bg-blue-900/20" : ""
+                    }`}
+                  >
+                    <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0 overflow-hidden relative">
+                      {conv.avatar_url ? (
+                        <Image src={conv.avatar_url} alt={conv.username} fill className="object-cover" sizes="40px" />
+                      ) : (
+                        <Image src={`https://robohash.org/${conv.username}?set=set3`} alt={conv.username} fill className="object-cover" sizes="40px" />
+                      )}
+                      {conv.presence_status === "online" && (
+                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-sm truncate ${conv.unread_count && conv.unread_count > 0 ? "font-bold text-gray-900 dark:text-gray-100" : "font-medium text-gray-700 dark:text-gray-300"}`}>
+                          {conv.display_name || conv.username}
+                        </span>
+                        {conv.last_message_time && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 ml-2">
+                            {formatTime(conv.last_message_time)}
+                          </span>
+                        )}
+                      </div>
+                      {conv.last_message && (
+                        <p className={`text-xs truncate mt-0.5 ${conv.unread_count && conv.unread_count > 0 ? "text-gray-700 dark:text-gray-300 font-medium" : "text-gray-500 dark:text-gray-400"}`}>
+                          {conv.is_sender ? "You: " : ""}{conv.last_message}
+                        </p>
+                      )}
+                    </div>
+                    {conv.unread_count && conv.unread_count > 0 && (
+                      <span className="w-5 h-5 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center flex-shrink-0">
+                        {conv.unread_count > 9 ? "9+" : conv.unread_count}
+                      </span>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Right Panel - Message Thread or Compose */}
+          <div className="flex-1 flex flex-col">
+            {showCompose ? (
+              /* Compose New Message */
+              <div className="flex flex-col h-full">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-3">New Message</h2>
+                  <div className="relative">
+                    <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 block">To:</label>
+                    {selectedRecipient ? (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {selectedRecipient.display_name || selectedRecipient.username}
+                        </span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">@{selectedRecipient.username}</span>
+                        <button
+                          onClick={() => { setSelectedRecipient(null); setRecipientSearch(""); }}
+                          className="ml-auto text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2">
+                          <Search className="w-4 h-4 text-gray-400" />
+                          <input
+                            type="text"
+                            value={recipientSearch}
+                            onChange={(e) => setRecipientSearch(e.target.value)}
+                            placeholder="Search for a user..."
+                            className="bg-transparent text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none w-full"
+                          />
+                        </div>
+                        {(recipientResults.length > 0 || searchingRecipient) && (
+                          <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                            {searchingRecipient ? (
+                              <div className="p-3 text-center">
+                                <Loader2 className="w-5 h-5 animate-spin text-blue-500 mx-auto" />
+                              </div>
+                            ) : (
+                              recipientResults.map((user: any) => (
+                                <button
+                                  key={user.id}
+                                  onClick={() => {
+                                    setSelectedRecipient(user);
+                                    setRecipientSearch("");
+                                    setRecipientResults([]);
+                                  }}
+                                  className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
+                                >
+                                  <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
+                                  <div>
+                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                      {user.display_name || user.username}
+                                    </span>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">@{user.username}</p>
+                                  </div>
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex-1 p-4">
+                  <textarea
+                    value={composeMessage}
+                    onChange={(e) => setComposeMessage(e.target.value)}
+                    placeholder="Type your message..."
+                    rows={6}
+                    className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  />
+                </div>
+
+                <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+                  <button
+                    onClick={() => { setShowCompose(false); setSelectedRecipient(null); setRecipientSearch(""); setComposeMessage(""); }}
+                    className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSendCompose}
+                    disabled={!selectedRecipient || !composeMessage.trim() || sendingCompose}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {sendingCompose ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    Send
+                  </button>
+                </div>
+              </div>
+            ) : activeConversation ? (
+              /* Message Thread */
+              <div className="flex flex-col h-full">
+                {/* Thread Header */}
+                <div className="flex items-center gap-3 p-4 border-b border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => setActiveConversation(null)}
+                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors md:hidden"
+                  >
+                    <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                  </button>
+                  <div className="w-9 h-9 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0 overflow-hidden relative">
+                    {activeConversation.avatar_url ? (
+                      <Image src={activeConversation.avatar_url} alt={activeConversation.username} fill className="object-cover" sizes="36px" />
+                    ) : (
+                      <Image src={`https://robohash.org/${activeConversation.username}?set=set3`} alt={activeConversation.username} fill className="object-cover" sizes="36px" />
+                    )}
+                  </div>
+                  <div>
+                    <Link href={`/profile?user=${activeConversation.username}`} className="text-sm font-bold text-gray-900 dark:text-gray-100 hover:underline">
+                      {activeConversation.display_name || activeConversation.username}
+                    </Link>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">@{activeConversation.username}</p>
+                  </div>
+                </div>
+
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  {loadingMessages ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div className="text-center py-12">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">No messages yet. Say hello!</p>
+                    </div>
+                  ) : (
+                    messages.map((msg) => {
+                      const isSender = msg.sender_id !== activeConversation.id;
+                      return (
+                        <div key={msg.id} className={`flex ${isSender ? "justify-end" : "justify-start"}`}>
+                          <div className={`max-w-[70%] px-4 py-2.5 rounded-2xl ${
+                            isSender
+                              ? "bg-blue-600 text-white rounded-br-md"
+                              : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-bl-md"
+                          }`}>
+                            <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                            <p className={`text-xs mt-1 ${isSender ? "text-blue-200" : "text-gray-500 dark:text-gray-400"}`}>
+                              {formatTime(msg.created_at)}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Message Input */}
+                <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={messageText}
+                      onChange={(e) => setMessageText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
+                      placeholder="Type a message..."
+                      className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button
+                      onClick={handleSendMessage}
+                      disabled={!messageText.trim() || sendingMessage}
+                      className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {sendingMessage ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* No conversation selected */
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                    <Send className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Your Messages</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    Select a conversation or start a new one
+                  </p>
+                  <button
+                    onClick={() => setShowCompose(true)}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors text-sm"
+                  >
+                    New Message
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </main>
 

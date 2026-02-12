@@ -138,11 +138,8 @@ const SettingsPage = () => {
     { id: "security", label: "Security" },
     { id: "privacy", label: "Privacy & content restrictions" },
     { id: "notifications", label: "Notifications" },
-    { id: "spending", label: "Spending" },
     { id: "membership", label: "Membership" },
     { id: "parental", label: "Parental controls" },
-    { id: "permissions", label: "App permissions" },
-    { id: "browser", label: "Browser preferences" },
   ];
 
   return (

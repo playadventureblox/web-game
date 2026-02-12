@@ -407,9 +407,9 @@ useEffect(() => {
                   />
                 </div>
 
-                {/* Currency Display */}
-                <div className="flex items-center gap-1.5">
-                  <button className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                {/* Currency Display with Hover Dropdown */}
+                <div className="relative group">
+                  <div className="flex items-center gap-1.5 cursor-pointer p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
                     <div className="w-9 h-9 relative flex-shrink-0">
                       <Image
                         src="/icons/currency_black.png"
@@ -426,10 +426,32 @@ useEffect(() => {
                         className="hidden dark:block"
                       />
                     </div>
-                  </button>
-                  <span className="text-gray-900 dark:text-gray-100 font-semibold text-sm">
-                    0
-                  </span>
+                    <span className="text-gray-900 dark:text-gray-100 font-semibold text-sm">
+                      0
+                    </span>
+                  </div>
+
+                  {/* Hover Dropdown */}
+                  <div className="absolute right-0 top-full mt-1 w-52 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150">
+                    <Link
+                      href="/adventurebux"
+                      className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium"
+                    >
+                      Buy AdventureBux
+                    </Link>
+                    <Link
+                      href="/adventurebux/transactions"
+                      className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium"
+                    >
+                      My Transactions
+                    </Link>
+                    <Link
+                      href="/adventurebux/redeem"
+                      className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium"
+                    >
+                      Redeem Codes
+                    </Link>
+                  </div>
                 </div>
 
                 {/* Settings Dropdown */}

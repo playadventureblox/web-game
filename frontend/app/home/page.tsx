@@ -86,19 +86,6 @@ const HomePage = () => {
     },
   ];
 
-  // Mock blog news
-  const blogNews = [
-    {
-      id: 1,
-      title: "The 5th Annual Bloxy Awards Theater is Open!",
-      link: "/blog/bloxy-awards",
-    },
-    {
-      id: 2,
-      title: "Plot Your Escape in the Roblox Labyrinth Event",
-      link: "/blog/labyrinth-event",
-    },
-  ];
 
   return (
     <ProtectedRoute>
@@ -459,9 +446,9 @@ const HomePage = () => {
               </div>
             </section>
 
-            {/* My Feed + Blog News Section */}
+            {/* My Feed Section */}
             <section className="mb-12">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div>
                 {/* My Feed */}
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
@@ -525,35 +512,6 @@ const HomePage = () => {
                           ) {post.timestamp}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Blog News */}
-                <div>
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                      Blog News
-                    </h2>
-                    <Link
-                      href="/blog"
-                      className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 font-semibold"
-                    >
-                      See More
-                    </Link>
-                  </div>
-
-                  <div className="space-y-4">
-                    {blogNews.map((news) => (
-                      <Link
-                        key={news.id}
-                        href={news.link}
-                        className="block bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        <h3 className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
-                          {news.title}
-                        </h3>
-                      </Link>
                     ))}
                   </div>
                 </div>

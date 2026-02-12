@@ -476,7 +476,7 @@ const GroupDetailPage = () => {
     },
   ];
 
-  const tabs = ["About", "Store", "Alliances"];
+  const tabs = ["About", "Store", "Alliances", "Events"];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -1314,6 +1314,35 @@ const GroupDetailPage = () => {
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === "Events" && (
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Events
+                </h2>
+                {currentGroup?.role === "Owner" && (
+                  <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors">
+                    Create Event
+                  </button>
+                )}
+              </div>
+
+              <div className="text-center py-16">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                  No Upcoming Events
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto">
+                  This group doesn&apos;t have any upcoming events. Check back later or ask the group owner to create one.
+                </p>
+              </div>
             </div>
           )}
 

@@ -233,19 +233,11 @@ const CatalogPage = () => {
               <span className="text-4xl">🎮</span>
             </div>
           )}
-          <span className="absolute top-1 left-1 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-            FREE
-          </span>
         </div>
         <div className="pt-2">
           <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-1 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400">
             {item.name}
           </h3>
-          {item.creatorName && (
-            <p className="text-xs text-gray-600 dark:text-gray-400">
-              By <span className="hover:underline">{item.creatorName}</span>
-            </p>
-          )}
         </div>
       </div>
     </Link>

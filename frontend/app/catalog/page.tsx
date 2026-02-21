@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Search, X, Loader2 } from "lucide-react";
+import { Search, X, Loader2, ChevronRight } from "lucide-react";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
@@ -27,6 +27,16 @@ interface CatalogItem {
   updatedAt: string;
 }
 
+interface CategoryEntry {
+  category: string;
+  itemCount: string;
+}
+
+interface SubcategoryEntry {
+  subcategory: string;
+  itemCount: string;
+}
+
 const CatalogPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -37,13 +47,17 @@ const CatalogPage = () => {
 
   // Filter states
   const [categoryFilter, setCategoryFilter] = useState("All");
+  const [subcategoryFilter, setSubcategoryFilter] = useState("");
   const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [showCreatorModal, setShowCreatorModal] = useState(false);
   const [showSortModal, setShowSortModal] = useState(false);
   const [showUnavailableModal, setShowUnavailableModal] = useState(false);
 
-  const [creatorFilter, setCreatorFilter] = useState("All Creators");
-  const [creatorNameInput, setCreatorNameInput] = useState("");
+  // Category/subcategory data from API
+  const [apiCategories, setApiCategories] = useState<CategoryEntry[]>([]);
+  const [apiSubcategories, setApiSubcategories] = useState<SubcategoryEntry[]>([]);
+  const [modalSelectedCategory, setModalSelectedCategory] = useState("All");
+  const [loadingSubcategories, setLoadingSubcategories] = useState(false);
+
   const [sortBy, setSortBy] = useState("Relevance");
   const [unavailableItemsFilter, setUnavailableItemsFilter] = useState(
     "Hide Unavailable Items",
@@ -55,6 +69,32 @@ const CatalogPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+
+  // Fetch categories from API on mount
+  useEffect(() => {
+    catalogApi.getCategories().then((res) => {
+      if (res.success && res.data) {
+        setApiCategories(res.data.categories);
+      }
+    });
+  }, []);
+
+  // Fetch subcategories when modal category selection changes
+  useEffect(() => {
+    if (modalSelectedCategory && modalSelectedCategory !== "All") {
+      setLoadingSubcategories(true);
+      catalogApi.getSubcategories(modalSelectedCategory).then((res) => {
+        if (res.success && res.data) {
+          setApiSubcategories(res.data.subcategories);
+        } else {
+          setApiSubcategories([]);
+        }
+        setLoadingSubcategories(false);
+      });
+    } else {
+      setApiSubcategories([]);
+    }
+  }, [modalSelectedCategory]);
 
   // Debounce search input
   useEffect(() => {
@@ -68,7 +108,6 @@ const CatalogPage = () => {
   const fetchItems = useCallback(async (page: number = 1) => {
     setLoading(true);
     try {
-      // Map unavailable filter to API param
       let availableParam: string | undefined;
       if (unavailableItemsFilter === "Hide Unavailable Items") {
         availableParam = "true";
@@ -78,6 +117,7 @@ const CatalogPage = () => {
 
       const response = await catalogApi.getItems({
         category: categoryFilter !== "All" ? categoryFilter : undefined,
+        subcategory: subcategoryFilter || undefined,
         search: searchDebounce || undefined,
         sort: sortBy,
         page,
@@ -99,12 +139,25 @@ const CatalogPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [categoryFilter, searchDebounce, sortBy, unavailableItemsFilter]);
+  }, [categoryFilter, subcategoryFilter, searchDebounce, sortBy, unavailableItemsFilter]);
 
   // Refetch when filters change
   useEffect(() => {
     fetchItems(1);
   }, [fetchItems]);
+
+  // Open category modal — pre-select current state
+  const openCategoryModal = () => {
+    setModalSelectedCategory(categoryFilter);
+    setShowCategoryModal(true);
+  };
+
+  // Apply category modal selection
+  const applyCategoryModal = (cat: string, sub: string) => {
+    setCategoryFilter(cat);
+    setSubcategoryFilter(sub);
+    setShowCategoryModal(false);
+  };
 
   // Tag scrolling functions
   const scrollTags = (direction: "left" | "right") => {
@@ -193,16 +246,6 @@ const CatalogPage = () => {
 
   const popularTags = Object.keys(tagData);
 
-  // Categories
-  const categories = [
-    { id: "all", label: "All" },
-    { id: "body", label: "Body" },
-    { id: "clothing", label: "Clothing" },
-    { id: "accessories", label: "Accessories" },
-    { id: "pets", label: "Pets" },
-    { id: "animations", label: "Animations" },
-  ];
-
   // Sort options
   const sortOptions = [
     "Relevance",
@@ -281,18 +324,16 @@ const CatalogPage = () => {
                   />
                 </div>
 
-                {/* Category Dropdown */}
+                {/* Category Quick Dropdown */}
                 <select
                   value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  onChange={(e) => { setCategoryFilter(e.target.value); setSubcategoryFilter(""); }}
                   className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
-                  <option>All</option>
-                  <option>Body</option>
-                  <option>Clothing</option>
-                  <option>Accessories</option>
-                  <option>Pets</option>
-                  <option>Animations</option>
+                  <option value="All">All</option>
+                  {apiCategories.map((cat) => (
+                    <option key={cat.category} value={cat.category}>{cat.category}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -300,38 +341,16 @@ const CatalogPage = () => {
             {/* Filter Buttons Row */}
             <div className="flex items-center gap-2 flex-wrap">
               <button
-                onClick={() => setShowCategoryModal(true)}
-                className="px-4 py-1.5 rounded-md text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors flex items-center gap-1.5"
+                onClick={openCategoryModal}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                  categoryFilter !== "All" || subcategoryFilter
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                }`}
               >
-                {categoryFilter}
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </button>
-
-              <button
-                onClick={() => setShowCreatorModal(true)}
-                className="px-4 py-1.5 rounded-md text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors flex items-center gap-1.5"
-              >
-                {creatorFilter}
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                    clipRule="evenodd"
-                  />
+                {subcategoryFilter ? `${categoryFilter} › ${subcategoryFilter}` : categoryFilter}
+                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
               </button>
 
@@ -514,107 +533,94 @@ const CatalogPage = () => {
         </div>
       </main>
 
-      {/* Category Modal */}
+      {/* Category Modal — two-level: category then subcategory */}
       {showCategoryModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                Category
-              </h3>
-              <button
-                onClick={() => setShowCategoryModal(false)}
-                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-              >
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Category</h3>
+              <button onClick={() => setShowCategoryModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
                 <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
             </div>
-            <div className="space-y-2">
-              {categories.map((cat) => (
-                <label
-                  key={cat.id}
-                  className="flex items-center gap-3 cursor-pointer p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded"
-                >
-                  <input
-                    type="radio"
-                    name="category"
-                    checked={categoryFilter === cat.label}
-                    onChange={() => setCategoryFilter(cat.label)}
-                    className="w-5 h-5"
-                  />
-                  <span className="text-sm text-gray-900 dark:text-gray-100">
-                    {cat.label}
-                  </span>
-                </label>
-              ))}
-            </div>
-            <button
-              onClick={() => setShowCategoryModal(false)}
-              className="w-full mt-6 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-semibold py-2.5 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200"
-            >
-              Apply
-            </button>
-          </div>
-        </div>
-      )}
 
-      {/* Creator Modal */}
-      {showCreatorModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                Creator
-              </h3>
-              <button
-                onClick={() => setShowCreatorModal(false)}
-                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-              >
-                <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              </button>
-            </div>
-            <div className="space-y-3">
-              <label className="flex items-center gap-3 cursor-pointer p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded">
-                <input
-                  type="radio"
-                  name="creator"
-                  checked={creatorFilter === "All Creators"}
-                  onChange={() => setCreatorFilter("All Creators")}
-                  className="w-5 h-5"
-                />
-                <span className="text-sm text-gray-900 dark:text-gray-100">
-                  All Creators
-                </span>
-              </label>
-              <div>
-                <label className="flex items-center gap-3 cursor-pointer p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded">
-                  <input
-                    type="radio"
-                    name="creator"
-                    checked={creatorFilter !== "All Creators"}
-                    onChange={() => setCreatorFilter("Specific Creator")}
-                    className="w-5 h-5"
-                  />
-                  <span className="text-sm text-gray-900 dark:text-gray-100">
-                    Specific Creator
-                  </span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="Creator Name"
-                  value={creatorNameInput}
-                  onChange={(e) => setCreatorNameInput(e.target.value)}
-                  disabled={creatorFilter === "All Creators"}
-                  className="w-full mt-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                />
+            <div className="flex gap-4">
+              {/* Left: Categories */}
+              <div className="w-1/2 space-y-1">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Category</p>
+                {/* All option */}
+                <button
+                  onClick={() => { setModalSelectedCategory("All"); }}
+                  className={`w-full text-left px-3 py-2 rounded text-sm flex items-center justify-between transition-colors ${
+                    modalSelectedCategory === "All"
+                      ? "bg-blue-600 text-white"
+                      : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  }`}
+                >
+                  All
+                </button>
+                {apiCategories.map((cat) => (
+                  <button
+                    key={cat.category}
+                    onClick={() => setModalSelectedCategory(cat.category)}
+                    className={`w-full text-left px-3 py-2 rounded text-sm flex items-center justify-between transition-colors ${
+                      modalSelectedCategory === cat.category
+                        ? "bg-blue-600 text-white"
+                        : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    }`}
+                  >
+                    <span>{cat.category}</span>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                  </button>
+                ))}
+              </div>
+
+              {/* Right: Subcategories */}
+              <div className="w-1/2 space-y-1">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Subcategory</p>
+                {modalSelectedCategory === "All" ? (
+                  <p className="text-sm text-gray-400 dark:text-gray-500 px-3 py-2">Select a category first</p>
+                ) : loadingSubcategories ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => applyCategoryModal(modalSelectedCategory, "")}
+                      className="w-full text-left px-3 py-2 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 transition-colors"
+                    >
+                      All {modalSelectedCategory}
+                    </button>
+                    {apiSubcategories.map((sub) => (
+                      <button
+                        key={sub.subcategory}
+                        onClick={() => applyCategoryModal(modalSelectedCategory, sub.subcategory)}
+                        className="w-full text-left px-3 py-2 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 transition-colors"
+                      >
+                        {sub.subcategory}
+                        <span className="ml-1 text-xs text-gray-400">({sub.itemCount})</span>
+                      </button>
+                    ))}
+                  </>
+                )}
               </div>
             </div>
-            <button
-              onClick={() => setShowCreatorModal(false)}
-              className="w-full mt-6 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-semibold py-2.5 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200"
-            >
-              Apply
-            </button>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => applyCategoryModal("All", "")}
+                className="flex-1 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm"
+              >
+                Clear
+              </button>
+              <button
+                onClick={() => applyCategoryModal(modalSelectedCategory, "")}
+                className="flex-1 py-2.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-semibold rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 text-sm"
+              >
+                Apply
+              </button>
+            </div>
           </div>
         </div>
       )}

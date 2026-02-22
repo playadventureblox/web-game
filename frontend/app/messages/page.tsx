@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Loader2, Send, ArrowLeft, Search, PenSquare, Reply, X } from "lucide-react";
-import Footer from "../components/Footer";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import { messagesApi, searchApi, storage } from "@/lib/api";
@@ -308,7 +307,7 @@ const MessagesPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+    <div className="h-screen overflow-hidden bg-gray-50 dark:bg-gray-900 flex flex-col">
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -320,7 +319,7 @@ const MessagesPage = () => {
       />
 
       {/* Main Content */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6 overflow-hidden flex flex-col">
+      <main className="flex-1 min-h-0 max-w-6xl w-full mx-auto px-4 py-4 overflow-hidden flex flex-col">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             Messages
@@ -662,8 +661,6 @@ const MessagesPage = () => {
         </div>
       </main>
 
-      {/* Footer */}
-      <Footer />
     </div>
   );
 };

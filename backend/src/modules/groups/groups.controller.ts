@@ -245,12 +245,12 @@ export const createGroup = async (req: AuthRequest, res: Response) => {
  */
 export const getGroupById = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     // Support lookup by UUID id OR by groupNumber
     const isNumeric = /^\d+$/.test(id);
     const whereClause = isNumeric ? `g."groupNumber" = $1` : `g.id = $1`;
-    const lookupParam = isNumeric ? parseInt(id) : id;
+    const lookupParam = isNumeric ? parseInt(id, 10) : id;
 
     const groupResult = await db.query(
       `SELECT

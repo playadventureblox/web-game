@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Loader2, Send, ArrowLeft, Search, PenSquare, Reply, X } from "lucide-react";
+import { Loader2, Send, ArrowLeft, Search, PenSquare, Reply, X, ImageIcon, Download, ZoomIn } from "lucide-react";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import { messagesApi, searchApi, storage } from "@/lib/api";
@@ -61,14 +61,92 @@ const MessagesPage = () => {
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [highlightedMsgId, setHighlightedMsgId] = useState<string | null>(null);
+  const [imageViewerUrl, setImageViewerUrl] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const imageFileRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messageRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const typingBroadcastRef = useRef<NodeJS.Timeout | null>(null);
   const currentUserIdRef = useRef<string | null>(null);
   const activeConvRef = useRef<Conversation | null>(null);
+
+  // Upload image to Supabase storage and return public URL
+  const uploadChatImage = async (file: File): Promise<string | null> => {
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      const ext = file.name.split('.').pop() || 'png';
+      const path = `chat/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from('chat-images').upload(path, file, { contentType: file.type });
+      if (error) { console.error('Upload error:', error); return null; }
+      const { data } = supabase.storage.from('chat-images').getPublicUrl(path);
+      return data.publicUrl;
+    } catch (e) {
+      console.error('Upload failed:', e);
+      return null;
+    }
+  };
+
+  const handleImageFile = async (file: File) => {
+    if (!activeConversation) return;
+    if (!file.type.startsWith('image/')) return;
+    setUploadingImage(true);
+    try {
+      const url = await uploadChatImage(file);
+      if (!url) return;
+      const userId = currentUserIdRef.current;
+      if (userId) broadcastTyping(userId, activeConversation.id, false);
+      const content = `[img:${url}]`;
+      const response = await messagesApi.sendMessage(activeConversation.id, content);
+      if (response.success && response.data) {
+        const newMsg = response.data.message as Message;
+        setMessages(prev => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg]);
+        refreshConversations();
+      }
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    // Image paste from clipboard
+    const items = Array.from(e.clipboardData.items);
+    const imageItem = items.find(i => i.type.startsWith('image/'));
+    if (imageItem) {
+      e.preventDefault();
+      const file = imageItem.getAsFile();
+      if (file) handleImageFile(file);
+      return;
+    }
+    // Rich text paste — strip HTML, preserve newlines
+    const html = e.clipboardData.getData('text/html');
+    if (html) {
+      e.preventDefault();
+      const div = document.createElement('div');
+      div.innerHTML = html;
+      // Replace block elements with newlines
+      div.querySelectorAll('p, br, div, li').forEach(el => {
+        el.before(document.createTextNode('\n'));
+      });
+      const text = (div.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
+      const ta = inputRef.current;
+      if (!ta) return;
+      const start = ta.selectionStart ?? messageText.length;
+      const end = ta.selectionEnd ?? messageText.length;
+      const newVal = messageText.slice(0, start) + text + messageText.slice(end);
+      handleMessageInput(newVal);
+      setTimeout(() => { if (ta) { ta.selectionStart = ta.selectionEnd = start + text.length; } }, 0);
+    }
+  };
+
+  // Close image viewer on ESC
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setImageViewerUrl(null); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   const scrollToMessage = (msgId: string) => {
     const el = messageRefsMap.current.get(msgId);
@@ -544,13 +622,16 @@ const MessagesPage = () => {
                   ) : (
                     messages.map((msg) => {
                       const isSender = msg.sender_id !== activeConversation.id;
+                      // Check if this is an image-only message
+                      const imgMatch = msg.content.match(/^\[img:(.+)\]$/);
+                      const isImageMsg = !!imgMatch;
+                      const imgUrl = imgMatch ? imgMatch[1] : null;
                       // Parse reply quote from content (lines starting with "> ")
                       const lines = msg.content.split('\n');
                       const quoteLines = lines.filter(l => l.startsWith('> '));
                       const bodyLines = lines.filter(l => !l.startsWith('> '));
                       const hasQuote = quoteLines.length > 0;
                       const rawQuote = quoteLines.map(l => l.slice(2)).join(' ');
-                      // Parse optional [msgId] prefix: "> [uuid] @user: text"
                       const quoteIdMatch = rawQuote.match(/^\[([a-f0-9-]{36})\]\s*(.+)$/);
                       const quotedMsgId = quoteIdMatch ? quoteIdMatch[1] : null;
                       const quoteText = quoteIdMatch ? quoteIdMatch[2] : rawQuote;
@@ -560,9 +641,8 @@ const MessagesPage = () => {
                         <div
                           key={msg.id}
                           ref={el => { if (el) messageRefsMap.current.set(msg.id, el); else messageRefsMap.current.delete(msg.id); }}
-                          className={`group flex items-end gap-1 ${isSender ? "justify-end" : "justify-start"} transition-all duration-300 ${isHighlighted ? 'scale-[1.02]' : ''}`}
+                          className={`group flex items-end gap-1 ${isSender ? 'justify-end' : 'justify-start'} transition-all duration-300 ${isHighlighted ? 'scale-[1.02]' : ''}`}
                         >
-                          {/* Reply button — left side for received, right side for sent */}
                           {!isSender && (
                             <button
                               onClick={() => { setReplyingTo(msg); inputRef.current?.focus(); }}
@@ -572,28 +652,55 @@ const MessagesPage = () => {
                               <Reply className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
                             </button>
                           )}
-                          <div className={`max-w-[70%] px-4 py-2.5 rounded-2xl ${
-                            isSender
-                              ? "bg-blue-600 text-white rounded-br-md"
-                              : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-bl-md"
-                          }`}>
-                            {hasQuote && (
+                          {isImageMsg && imgUrl ? (
+                            /* Image message bubble */
+                            <div className="max-w-[60%] relative group/img">
                               <div
-                                onClick={() => quotedMsgId && scrollToMessage(quotedMsgId)}
-                                className={`text-xs mb-1.5 px-2 py-1 rounded border-l-2 ${
-                                  isSender
-                                    ? "border-blue-300 bg-blue-500/30 text-blue-100"
-                                    : "border-gray-400 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300"
-                                } ${quotedMsgId ? 'cursor-pointer hover:opacity-80 active:opacity-60' : ''}`}
+                                className={`rounded-2xl overflow-hidden cursor-pointer border-2 ${
+                                  isSender ? 'border-blue-500' : 'border-gray-200 dark:border-gray-600'
+                                }`}
+                                onClick={() => setImageViewerUrl(imgUrl)}
                               >
-                                <span className="truncate block">{quoteText}</span>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={imgUrl}
+                                  alt="Shared image"
+                                  className="max-w-full max-h-64 object-cover block"
+                                  loading="lazy"
+                                />
+                                <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/20 transition-colors flex items-center justify-center">
+                                  <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover/img:opacity-100 transition-opacity drop-shadow" />
+                                </div>
                               </div>
-                            )}
-                            <p className="text-sm whitespace-pre-wrap break-words">{bodyText || msg.content}</p>
-                            <p className={`text-xs mt-1 ${isSender ? "text-blue-200" : "text-gray-500 dark:text-gray-400"}`}>
-                              {formatTime(msg.created_at)}
-                            </p>
-                          </div>
+                              <p className={`text-xs mt-1 ${isSender ? 'text-right text-gray-500 dark:text-gray-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                                {formatTime(msg.created_at)}
+                              </p>
+                            </div>
+                          ) : (
+                            /* Text message bubble */
+                            <div className={`max-w-[70%] px-4 py-2.5 rounded-2xl ${
+                              isSender
+                                ? 'bg-blue-600 text-white rounded-br-md'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-bl-md'
+                            }`}>
+                              {hasQuote && (
+                                <div
+                                  onClick={() => quotedMsgId && scrollToMessage(quotedMsgId)}
+                                  className={`text-xs mb-1.5 px-2 py-1 rounded border-l-2 ${
+                                    isSender
+                                      ? 'border-blue-300 bg-blue-500/30 text-blue-100'
+                                      : 'border-gray-400 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+                                  } ${quotedMsgId ? 'cursor-pointer hover:opacity-80 active:opacity-60' : ''}`}
+                                >
+                                  <span className="truncate block">{quoteText}</span>
+                                </div>
+                              )}
+                              <p className="text-sm whitespace-pre-wrap break-words">{bodyText || msg.content}</p>
+                              <p className={`text-xs mt-1 ${isSender ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'}`}>
+                                {formatTime(msg.created_at)}
+                              </p>
+                            </div>
+                          )}
                           {isSender && (
                             <button
                               onClick={() => { setReplyingTo(msg); inputRef.current?.focus(); }}
@@ -634,26 +741,50 @@ const MessagesPage = () => {
                       </button>
                     </div>
                   )}
-                  <div className="flex items-center gap-2 p-4">
+                  <div className="flex items-end gap-2 p-3">
+                    {/* Hidden file input */}
                     <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      ref={imageFileRef}
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageFile(f); e.target.value = ''; }}
+                    />
+                    {/* Image attach button */}
+                    <button
+                      onClick={() => imageFileRef.current?.click()}
+                      disabled={uploadingImage}
+                      className="p-2 text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors flex-shrink-0 disabled:opacity-50"
+                      title="Attach image"
+                    >
+                      {uploadingImage ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImageIcon className="w-5 h-5" />}
+                    </button>
+                    {/* Auto-grow textarea */}
+                    <textarea
                       ref={inputRef}
-                      type="text"
+                      rows={1}
                       value={messageText}
-                      onChange={(e) => handleMessageInput(e.target.value)}
+                      onChange={(e) => {
+                        handleMessageInput(e.target.value);
+                        e.target.style.height = 'auto';
+                        e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                      }}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
+                        if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault();
                           handleSendMessage();
                         }
-                        if (e.key === "Escape") setReplyingTo(null);
+                        if (e.key === 'Escape') setReplyingTo(null);
                       }}
-                      placeholder={replyingTo ? `Reply to @${replyingTo.sender_username}...` : "Type a message..."}
-                      className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onPaste={handlePaste}
+                      placeholder={replyingTo ? `Reply to @${replyingTo.sender_username}… (Shift+Enter for new line)` : 'Type a message… (Shift+Enter for new line)'}
+                      className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-2xl text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-y-auto leading-5"
+                      style={{ minHeight: '40px', maxHeight: '120px' }}
                     />
                     <button
                       onClick={handleSendMessage}
                       disabled={!messageText.trim() || sendingMessage}
-                      className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                     >
                       {sendingMessage ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                     </button>
@@ -684,6 +815,50 @@ const MessagesPage = () => {
         </div>
       </main>
 
+      {/* Image Viewer Modal */}
+      {imageViewerUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center"
+          onClick={() => setImageViewerUrl(null)}
+        >
+          {/* Toolbar */}
+          <div
+            className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/60 to-transparent"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="text-white text-sm font-medium opacity-80">Image</span>
+            <div className="flex items-center gap-2">
+              <a
+                href={imageViewerUrl}
+                download
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-medium rounded-lg transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Download className="w-3.5 h-3.5" />
+                Download
+              </a>
+              <button
+                onClick={() => setImageViewerUrl(null)}
+                className="p-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          {/* Image */}
+          <div onClick={(e) => e.stopPropagation()} className="max-w-[90vw] max-h-[85vh] flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imageViewerUrl}
+              alt="Full size"
+              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+            />
+          </div>
+          <p className="text-white/40 text-xs mt-3">Click outside to close · ESC to close</p>
+        </div>
+      )}
     </div>
   );
 };

@@ -38,10 +38,44 @@ interface AuthResponse {
   refreshToken: string;
 }
 
+// Silent token refresh — returns true if successful
+let _isRefreshing = false;
+let _refreshPromise: Promise<boolean> | null = null;
+
+async function silentRefresh(): Promise<boolean> {
+  if (_isRefreshing && _refreshPromise) return _refreshPromise;
+  _isRefreshing = true;
+  _refreshPromise = (async () => {
+    try {
+      const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+      if (!refreshToken) return false;
+      const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+      const data = await res.json();
+      if (data.success && data.data?.accessToken) {
+        localStorage.setItem('accessToken', data.data.accessToken);
+        localStorage.setItem('refreshToken', data.data.refreshToken);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    } finally {
+      _isRefreshing = false;
+      _refreshPromise = null;
+    }
+  })();
+  return _refreshPromise;
+}
+
 // Helper function to handle API calls
 async function apiCall<T>(
   endpoint: string,
   options: RequestInit = {},
+  _retry = false,
 ): Promise<ApiResponse<T>> {
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -51,6 +85,29 @@ async function apiCall<T>(
         ...options.headers,
       },
     });
+
+    // On 401, try silent refresh once then retry
+    if (response.status === 401 && !_retry && endpoint !== '/auth/refresh') {
+      const refreshed = await silentRefresh();
+      if (refreshed) {
+        // Rebuild Authorization header with new token
+        const newToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+        const newOptions: RequestInit = {
+          ...options,
+          headers: {
+            'Content-Type': 'application/json',
+            ...options.headers,
+            ...(newToken ? { Authorization: `Bearer ${newToken}` } : {}),
+          },
+        };
+        return apiCall<T>(endpoint, newOptions, true);
+      }
+      // Refresh failed — clear tokens but do NOT redirect (let UI handle it gracefully)
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+      }
+    }
 
     const data = await response.json();
     return data;

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Loader2, Send, ArrowLeft, Search, PenSquare } from "lucide-react";
+import { Loader2, Send, ArrowLeft, Search, PenSquare, Reply, X } from "lucide-react";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
@@ -40,6 +40,9 @@ interface Message {
   sender_username: string;
   sender_display_name?: string;
   sender_avatar_url?: string;
+  reply_to_id?: string;
+  reply_to_content?: string;
+  reply_to_sender?: string;
 }
 
 const MessagesPage = () => {
@@ -57,7 +60,9 @@ const MessagesPage = () => {
   const [messageText, setMessageText] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const typingBroadcastRef = useRef<NodeJS.Timeout | null>(null);
@@ -233,10 +238,15 @@ const MessagesPage = () => {
 
     setSendingMessage(true);
     const text = messageText.trim();
+    // Prepend reply quote if replying
+    const fullContent = replyingTo
+      ? `> @${replyingTo.sender_username}: ${replyingTo.content.slice(0, 80)}${replyingTo.content.length > 80 ? '…' : ''}\n${text}`
+      : text;
     setMessageText("");
+    setReplyingTo(null);
 
     try {
-      const response = await messagesApi.sendMessage(activeConversation.id, text);
+      const response = await messagesApi.sendMessage(activeConversation.id, fullContent);
       if (response.success && response.data) {
         const newMsg = response.data.message as Message;
         setMessages((prev) => {
@@ -248,6 +258,7 @@ const MessagesPage = () => {
     } catch (error) {
       console.error("Error sending message:", error);
       setMessageText(text); // restore on failure
+      setReplyingTo(null);
     } finally {
       setSendingMessage(false);
     }
@@ -309,7 +320,7 @@ const MessagesPage = () => {
       />
 
       {/* Main Content */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6 overflow-hidden flex flex-col">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             Messages
@@ -323,7 +334,7 @@ const MessagesPage = () => {
           </button>
         </div>
 
-        <div className="flex gap-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden" style={{ height: 'calc(100vh - 200px)', minHeight: '500px' }}>
+        <div className="flex gap-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden flex-1 min-h-0">
           {/* Conversations List (Left Panel) */}
           <div className="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 flex flex-col">
             <div className="p-3 border-b border-gray-200 dark:border-gray-700">
@@ -523,18 +534,53 @@ const MessagesPage = () => {
                   ) : (
                     messages.map((msg) => {
                       const isSender = msg.sender_id !== activeConversation.id;
+                      // Parse reply quote from content (lines starting with "> ")
+                      const lines = msg.content.split('\n');
+                      const quoteLines = lines.filter(l => l.startsWith('> '));
+                      const bodyLines = lines.filter(l => !l.startsWith('> '));
+                      const hasQuote = quoteLines.length > 0;
+                      const quoteText = quoteLines.map(l => l.slice(2)).join(' ');
+                      const bodyText = bodyLines.join('\n').trim();
                       return (
-                        <div key={msg.id} className={`flex ${isSender ? "justify-end" : "justify-start"}`}>
+                        <div key={msg.id} className={`group flex items-end gap-1 ${isSender ? "justify-end" : "justify-start"}`}>
+                          {/* Reply button — left side for received, right side for sent */}
+                          {!isSender && (
+                            <button
+                              onClick={() => { setReplyingTo(msg); inputRef.current?.focus(); }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 flex-shrink-0 mb-1"
+                              title="Reply"
+                            >
+                              <Reply className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                            </button>
+                          )}
                           <div className={`max-w-[70%] px-4 py-2.5 rounded-2xl ${
                             isSender
                               ? "bg-blue-600 text-white rounded-br-md"
                               : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-bl-md"
                           }`}>
-                            <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                            {hasQuote && (
+                              <div className={`text-xs mb-1.5 px-2 py-1 rounded border-l-2 ${
+                                isSender
+                                  ? "border-blue-300 bg-blue-500/30 text-blue-100"
+                                  : "border-gray-400 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300"
+                              }`}>
+                                <span className="truncate block">{quoteText}</span>
+                              </div>
+                            )}
+                            <p className="text-sm whitespace-pre-wrap break-words">{bodyText || msg.content}</p>
                             <p className={`text-xs mt-1 ${isSender ? "text-blue-200" : "text-gray-500 dark:text-gray-400"}`}>
                               {formatTime(msg.created_at)}
                             </p>
                           </div>
+                          {isSender && (
+                            <button
+                              onClick={() => { setReplyingTo(msg); inputRef.current?.focus(); }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 flex-shrink-0 mb-1"
+                              title="Reply"
+                            >
+                              <Reply className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                            </button>
+                          )}
                         </div>
                       );
                     })
@@ -553,9 +599,22 @@ const MessagesPage = () => {
                 </div>
 
                 {/* Message Input */}
-                <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center gap-2">
+                <div className="border-t border-gray-200 dark:border-gray-700">
+                  {/* Reply preview bar */}
+                  {replyingTo && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700">
+                      <Reply className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                      <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">Replying to</span>
+                      <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex-shrink-0">@{replyingTo.sender_username}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">{replyingTo.content.slice(0, 60)}{replyingTo.content.length > 60 ? '…' : ''}</span>
+                      <button onClick={() => setReplyingTo(null)} className="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 p-4">
                     <input
+                      ref={inputRef}
                       type="text"
                       value={messageText}
                       onChange={(e) => handleMessageInput(e.target.value)}
@@ -564,8 +623,9 @@ const MessagesPage = () => {
                           e.preventDefault();
                           handleSendMessage();
                         }
+                        if (e.key === "Escape") setReplyingTo(null);
                       }}
-                      placeholder="Type a message..."
+                      placeholder={replyingTo ? `Reply to @${replyingTo.sender_username}...` : "Type a message..."}
                       className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <button

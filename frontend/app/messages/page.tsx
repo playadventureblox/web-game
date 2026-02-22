@@ -60,13 +60,23 @@ const MessagesPage = () => {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [highlightedMsgId, setHighlightedMsgId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const messageRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const typingBroadcastRef = useRef<NodeJS.Timeout | null>(null);
   const currentUserIdRef = useRef<string | null>(null);
   const activeConvRef = useRef<Conversation | null>(null);
+
+  const scrollToMessage = (msgId: string) => {
+    const el = messageRefsMap.current.get(msgId);
+    if (!el || !messagesContainerRef.current) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setHighlightedMsgId(msgId);
+    setTimeout(() => setHighlightedMsgId(null), 1500);
+  };
 
   // New message compose
   const [showCompose, setShowCompose] = useState(false);
@@ -237,9 +247,10 @@ const MessagesPage = () => {
 
     setSendingMessage(true);
     const text = messageText.trim();
-    // Prepend reply quote if replying
+    // Prepend reply quote if replying — embed msgId so we can scroll to original
+    const rawContent = replyingTo?.content.split('\n').filter(l => !l.startsWith('> ')).join('\n').trim() || '';
     const fullContent = replyingTo
-      ? `> @${replyingTo.sender_username}: ${replyingTo.content.slice(0, 80)}${replyingTo.content.length > 80 ? '…' : ''}\n${text}`
+      ? `> [${replyingTo.id}] @${replyingTo.sender_username}: ${rawContent.slice(0, 80)}${rawContent.length > 80 ? '…' : ''}\n${text}`
       : text;
     setMessageText("");
     setReplyingTo(null);
@@ -538,10 +549,19 @@ const MessagesPage = () => {
                       const quoteLines = lines.filter(l => l.startsWith('> '));
                       const bodyLines = lines.filter(l => !l.startsWith('> '));
                       const hasQuote = quoteLines.length > 0;
-                      const quoteText = quoteLines.map(l => l.slice(2)).join(' ');
+                      const rawQuote = quoteLines.map(l => l.slice(2)).join(' ');
+                      // Parse optional [msgId] prefix: "> [uuid] @user: text"
+                      const quoteIdMatch = rawQuote.match(/^\[([a-f0-9-]{36})\]\s*(.+)$/);
+                      const quotedMsgId = quoteIdMatch ? quoteIdMatch[1] : null;
+                      const quoteText = quoteIdMatch ? quoteIdMatch[2] : rawQuote;
                       const bodyText = bodyLines.join('\n').trim();
+                      const isHighlighted = highlightedMsgId === msg.id;
                       return (
-                        <div key={msg.id} className={`group flex items-end gap-1 ${isSender ? "justify-end" : "justify-start"}`}>
+                        <div
+                          key={msg.id}
+                          ref={el => { if (el) messageRefsMap.current.set(msg.id, el); else messageRefsMap.current.delete(msg.id); }}
+                          className={`group flex items-end gap-1 ${isSender ? "justify-end" : "justify-start"} transition-all duration-300 ${isHighlighted ? 'scale-[1.02]' : ''}`}
+                        >
                           {/* Reply button — left side for received, right side for sent */}
                           {!isSender && (
                             <button
@@ -558,11 +578,14 @@ const MessagesPage = () => {
                               : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-bl-md"
                           }`}>
                             {hasQuote && (
-                              <div className={`text-xs mb-1.5 px-2 py-1 rounded border-l-2 ${
-                                isSender
-                                  ? "border-blue-300 bg-blue-500/30 text-blue-100"
-                                  : "border-gray-400 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300"
-                              }`}>
+                              <div
+                                onClick={() => quotedMsgId && scrollToMessage(quotedMsgId)}
+                                className={`text-xs mb-1.5 px-2 py-1 rounded border-l-2 ${
+                                  isSender
+                                    ? "border-blue-300 bg-blue-500/30 text-blue-100"
+                                    : "border-gray-400 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300"
+                                } ${quotedMsgId ? 'cursor-pointer hover:opacity-80 active:opacity-60' : ''}`}
+                              >
                                 <span className="truncate block">{quoteText}</span>
                               </div>
                             )}

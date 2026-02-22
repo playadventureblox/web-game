@@ -1,34 +1,33 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { useRealtime } from '@/contexts/RealtimeContext';
 
-interface UserPresence {
-  presenceStatus: string;
+export interface UserPresence {
+  presenceStatus: 'online' | 'offline' | 'in-game';
   currentGame?: string;
-  lastOnline: string;
+  lastOnline: string | null;
+  isOnline: boolean;
 }
 
 /**
- * Hook to get real-time presence for a specific user
+ * Hook to get real-time presence for a specific user.
+ * Always returns a value — offline if user is not in the presence map.
  */
-export const useUserPresence = (userId: string | undefined): UserPresence | null => {
+export const useUserPresence = (userId: string | undefined): UserPresence => {
   const { presenceMap } = useRealtime();
-  const [presence, setPresence] = useState<UserPresence | null>(null);
 
-  useEffect(() => {
+  return useMemo(() => {
     if (!userId) {
-      setPresence(null);
-      return;
+      return { presenceStatus: 'offline', lastOnline: null, isOnline: false };
     }
-
-    const userPresence = presenceMap.get(userId);
-    if (userPresence) {
-      setPresence({
-        presenceStatus: userPresence.presenceStatus,
-        currentGame: userPresence.currentGame,
-        lastOnline: userPresence.lastOnline,
-      });
+    const p = presenceMap.get(userId);
+    if (p) {
+      return {
+        presenceStatus: p.presenceStatus,
+        currentGame: p.currentGame,
+        lastOnline: p.lastOnline,
+        isOnline: p.presenceStatus === 'online' || p.presenceStatus === 'in-game',
+      };
     }
+    return { presenceStatus: 'offline', lastOnline: null, isOnline: false };
   }, [userId, presenceMap]);
-
-  return presence;
 };

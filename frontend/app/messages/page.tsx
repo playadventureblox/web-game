@@ -15,6 +15,7 @@ import {
   broadcastTyping,
   markMessagesAsRead,
 } from "@/lib/realtime";
+import { useUserPresence } from "@/hooks/useUserPresence";
 
 interface Conversation {
   id: string;
@@ -43,6 +44,40 @@ interface Message {
   reply_to_content?: string;
   reply_to_sender?: string;
 }
+
+// Sub-component: presence dot for conversation list (uses hook per-user)
+const ConvPresenceDot = ({ userId }: { userId: string }) => {
+  const p = useUserPresence(userId);
+  if (!p.isOnline) return null;
+  return (
+    <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${
+      p.presenceStatus === 'in-game' ? 'bg-green-500' : 'bg-green-500'
+    }`} />
+  );
+};
+
+// Sub-component: status label for active chat header
+const ChatPresenceStatus = ({ userId, lastOnlineFallback }: { userId: string; lastOnlineFallback?: string }) => {
+  const p = useUserPresence(userId);
+
+  const formatLastSeen = (iso: string | null) => {
+    if (!iso) return 'Offline';
+    const d = new Date(iso);
+    const diff = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (diff < 60) return 'Last seen just now';
+    if (diff < 3600) return `Last seen ${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `Last seen ${Math.floor(diff / 3600)}h ago`;
+    return `Last seen ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+  };
+
+  if (p.presenceStatus === 'in-game') {
+    return <p className="text-xs text-green-500 font-medium">In Game{p.currentGame ? ` · ${p.currentGame}` : ''}</p>;
+  }
+  if (p.isOnline) {
+    return <p className="text-xs text-green-500 font-medium">Online</p>;
+  }
+  return <p className="text-xs text-gray-400 dark:text-gray-500">{formatLastSeen(p.lastOnline || lastOnlineFallback || null)}</p>;
+};
 
 const MessagesPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -456,9 +491,7 @@ const MessagesPage = () => {
                       ) : (
                         <Image src={`https://robohash.org/${conv.username}?set=set3`} alt={conv.username} fill className="object-cover" sizes="40px" />
                       )}
-                      {conv.presence_status === "online" && (
-                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800" />
-                      )}
+                      <ConvPresenceDot userId={conv.id} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
@@ -602,10 +635,10 @@ const MessagesPage = () => {
                     )}
                   </div>
                   <div>
-                    <Link href={`/profile?user=${activeConversation.username}`} className="text-sm font-bold text-gray-900 dark:text-gray-100 hover:underline">
+                    <Link href={`/profile/${activeConversation.username}`} className="text-sm font-bold text-gray-900 dark:text-gray-100 hover:underline">
                       {activeConversation.display_name || activeConversation.username}
                     </Link>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">@{activeConversation.username}</p>
+                    <ChatPresenceStatus userId={activeConversation.id} />
                   </div>
                 </div>
 

@@ -30,6 +30,27 @@ let typingChannels: Map<string, RealtimeChannel> = new Map();
 /**
  * Initialize presence tracking with Supabase Realtime
  */
+// Helper to build presenceMap from Supabase presence state
+const buildPresenceMap = (state: RealtimePresenceState): Map<string, PresenceData> => {
+  const map = new Map<string, PresenceData>();
+  Object.keys(state).forEach((key) => {
+    const presences = state[key];
+    if (presences && presences.length > 0) {
+      const p = presences[0] as any;
+      if (p && p.userId) {
+        map.set(p.userId, {
+          userId: p.userId,
+          username: p.username,
+          presenceStatus: p.presenceStatus || 'online',
+          currentGame: p.currentGame,
+          lastOnline: p.lastOnline,
+        });
+      }
+    }
+  });
+  return map;
+};
+
 export const initializePresence = async (
   userId: string,
   username: string,
@@ -49,50 +70,30 @@ export const initializePresence = async (
     },
   });
 
-  // Track current user's presence
   presenceChannel
     .on('presence', { event: 'sync' }, () => {
       const state: RealtimePresenceState = presenceChannel!.presenceState();
-      const presenceMap = new Map<string, PresenceData>();
-
-      Object.keys(state).forEach((key) => {
-        const presences = state[key];
-        if (presences && presences.length > 0) {
-          const presenceData = presences[0] as any;
-          // Extract the actual presence data from Supabase's structure
-          if (presenceData && presenceData.userId) {
-            presenceMap.set(presenceData.userId, {
-              userId: presenceData.userId,
-              username: presenceData.username,
-              presenceStatus: presenceData.presenceStatus || 'offline',
-              currentGame: presenceData.currentGame,
-              lastOnline: presenceData.lastOnline,
-            });
-          }
-        }
-      });
-
-      onPresenceUpdate(presenceMap);
+      onPresenceUpdate(buildPresenceMap(state));
     })
-    .on('presence', { event: 'join' }, ({ key, newPresences }: { key: string; newPresences: any[] }) => {
-      console.log('User joined:', key, newPresences);
+    .on('presence', { event: 'join' }, () => {
+      // Re-sync on join so map is always up to date
+      const state: RealtimePresenceState = presenceChannel!.presenceState();
+      onPresenceUpdate(buildPresenceMap(state));
     })
-    .on('presence', { event: 'leave' }, ({ key, leftPresences }: { key: string; leftPresences: any[] }) => {
-      console.log('User left:', key, leftPresences);
+    .on('presence', { event: 'leave' }, () => {
+      // Re-sync on leave so departed users are removed
+      const state: RealtimePresenceState = presenceChannel!.presenceState();
+      onPresenceUpdate(buildPresenceMap(state));
     })
     .subscribe(async (status: string) => {
       if (status === 'SUBSCRIBED') {
-        // Track this user's presence
         await presenceChannel!.track({
           userId,
           username,
           presenceStatus: 'online',
           lastOnline: new Date().toISOString(),
         });
-
-        // Update database
         await updatePresenceInDatabase(userId, 'online');
-        console.log('✅ Presence tracking initialized');
       }
     });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { initializePresence, disconnectPresence, cleanupRealtimeChannels, PresenceData } from '@/lib/realtime';
 import { isAuthenticated } from '@/lib/auth';
 import { storage } from '@/lib/api';
@@ -25,52 +25,63 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({ children }) 
   const [presenceMap, setPresenceMap] = useState<Map<string, PresenceData>>(new Map());
   const [isConnected, setIsConnected] = useState(false);
 
+  const handlePresenceUpdate = useCallback((presences: Map<string, PresenceData>) => {
+    // Replace the whole map — Supabase 'sync' gives us the full current state
+    setPresenceMap(new Map(presences));
+  }, []);
+
   useEffect(() => {
-    // Only initialize if user is authenticated
-    if (!isAuthenticated()) {
-      return;
-    }
+    if (!isAuthenticated()) return;
 
     const token = storage.getAccessToken();
-    if (!token) {
+    if (!token) return;
+
+    let userId: string;
+    let username: string;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      userId = payload.userId;
+      username = payload.username;
+    } catch {
       return;
     }
 
-    // Decode JWT to get user info
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const userId = payload.userId;
-      const username = payload.username;
+    const initPresence = async () => {
+      try {
+        await initializePresence(userId, username, handlePresenceUpdate);
+        setIsConnected(true);
+      } catch (error) {
+        console.error('Failed to initialize presence:', error);
+        setIsConnected(false);
+      }
+    };
 
-      // Initialize presence tracking
-      const initPresence = async () => {
-        try {
-          await initializePresence(userId, username, (presences) => {
-            setPresenceMap(presences);
-          });
-          setIsConnected(true);
-          console.log('🟢 Realtime system connected');
-        } catch (error) {
-          console.error('Failed to initialize presence:', error);
-          setIsConnected(false);
-        }
-      };
+    initPresence();
 
-      initPresence();
+    // Mark offline when tab is hidden / closed
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        disconnectPresence();
+      } else if (document.visibilityState === 'visible') {
+        // Re-join when tab becomes visible again
+        initPresence();
+      }
+    };
 
-      // Cleanup on unmount
-      return () => {
-        const cleanup = async () => {
-          await cleanupRealtimeChannels();
-          setIsConnected(false);
-          console.log('🔴 Realtime system disconnected');
-        };
-        cleanup();
-      };
-    } catch (error) {
-      console.error('Error decoding token:', error);
-    }
-  }, []);
+    const handleBeforeUnload = () => {
+      disconnectPresence();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      cleanupRealtimeChannels();
+      setIsConnected(false);
+    };
+  }, [handlePresenceUpdate]);
 
   return (
     <RealtimeContext.Provider value={{ presenceMap, isConnected }}>

@@ -1,13 +1,21 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Loader2, Send, ArrowLeft, Search, PenSquare } from "lucide-react";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
-import { messagesApi, searchApi } from "@/lib/api";
+import { messagesApi, searchApi, storage } from "@/lib/api";
+import {
+  subscribeToMessages,
+  unsubscribeFromMessages,
+  subscribeToTyping,
+  unsubscribeFromTyping,
+  broadcastTyping,
+  markMessagesAsRead,
+} from "@/lib/realtime";
 
 interface Conversation {
   id: string;
@@ -48,7 +56,13 @@ const MessagesPage = () => {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [messageText, setMessageText] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingBroadcastRef = useRef<NodeJS.Timeout | null>(null);
+  const currentUserIdRef = useRef<string | null>(null);
+  const activeConvRef = useRef<Conversation | null>(null);
 
   // New message compose
   const [showCompose, setShowCompose] = useState(false);
@@ -60,31 +74,54 @@ const MessagesPage = () => {
   const [sendingCompose, setSendingCompose] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch conversations
+  // Keep activeConvRef in sync so realtime callbacks always have current value
+  useEffect(() => {
+    activeConvRef.current = activeConversation;
+  }, [activeConversation]);
+
+  // Decode current user ID once
+  useEffect(() => {
+    const token = storage.getAccessToken();
+    if (!token) return;
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      currentUserIdRef.current = payload.userId;
+    } catch {}
+  }, []);
+
+  const refreshConversations = useCallback(async () => {
+    const response = await messagesApi.getConversations();
+    if (response.success && response.data) {
+      setConversations((response.data.conversations as Conversation[]) || []);
+    }
+  }, []);
+
+  // Fetch conversations on mount
   useEffect(() => {
     const fetchConversations = async () => {
       setLoadingConversations(true);
       try {
-        const response = await messagesApi.getConversations();
-        if (response.success && response.data) {
-          setConversations((response.data.conversations as Conversation[]) || []);
-        }
+        await refreshConversations();
       } catch (error) {
         console.error("Error fetching conversations:", error);
       } finally {
         setLoadingConversations(false);
       }
     };
-
     fetchConversations();
-  }, []);
+  }, [refreshConversations]);
 
-  // Fetch messages for active conversation
+  // Fetch messages + subscribe to realtime when active conversation changes
   useEffect(() => {
     if (!activeConversation) return;
 
+    const userId = currentUserIdRef.current;
+    if (!userId) return;
+
+    // Fetch existing messages
     const fetchMessages = async () => {
       setLoadingMessages(true);
+      setIsOtherUserTyping(false);
       try {
         const response = await messagesApi.getMessages(activeConversation.id);
         if (response.success && response.data) {
@@ -95,15 +132,48 @@ const MessagesPage = () => {
       } finally {
         setLoadingMessages(false);
       }
+      // Mark as read
+      markMessagesAsRead(activeConversation.id);
     };
 
     fetchMessages();
-  }, [activeConversation]);
 
-  // Scroll to bottom when messages change
+    // Subscribe to incoming messages in real-time
+    subscribeToMessages(userId, activeConversation.id, (newMsg) => {
+      setMessages((prev) => {
+        // Deduplicate by id
+        if (prev.some((m) => m.id === newMsg.id)) return prev;
+        return [...prev, newMsg as unknown as Message];
+      });
+      // Update conversation list preview
+      refreshConversations();
+      // Mark as read immediately since we're in the conversation
+      markMessagesAsRead(activeConversation.id);
+    });
+
+    // Subscribe to typing indicators
+    subscribeToTyping(userId, activeConversation.id, (isTyping) => {
+      setIsOtherUserTyping(isTyping);
+      // Auto-clear typing after 3s in case stop event is missed
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (isTyping) {
+        typingTimeoutRef.current = setTimeout(() => setIsOtherUserTyping(false), 3000);
+      }
+    });
+
+    return () => {
+      if (!userId) return;
+      unsubscribeFromMessages(userId, activeConversation.id);
+      unsubscribeFromTyping(userId, activeConversation.id);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (typingBroadcastRef.current) clearTimeout(typingBroadcastRef.current);
+    };
+  }, [activeConversation?.id, refreshConversations]);
+
+  // Scroll to bottom when messages change or typing indicator appears
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, isOtherUserTyping]);
 
   // Recipient search with debounce
   useEffect(() => {
@@ -112,9 +182,7 @@ const MessagesPage = () => {
       return;
     }
 
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
 
     searchTimeoutRef.current = setTimeout(async () => {
       setSearchingRecipient(true);
@@ -135,24 +203,51 @@ const MessagesPage = () => {
     };
   }, [recipientSearch]);
 
+  // Handle typing input — broadcast typing events with debounce
+  const handleMessageInput = (value: string) => {
+    setMessageText(value);
+
+    const userId = currentUserIdRef.current;
+    const conv = activeConvRef.current;
+    if (!userId || !conv) return;
+
+    // Broadcast "is typing"
+    broadcastTyping(userId, conv.id, true);
+
+    // Debounce "stopped typing"
+    if (typingBroadcastRef.current) clearTimeout(typingBroadcastRef.current);
+    typingBroadcastRef.current = setTimeout(() => {
+      broadcastTyping(userId, conv.id, false);
+    }, 1500);
+  };
+
   // Send message in thread
   const handleSendMessage = async () => {
     if (!activeConversation || !messageText.trim()) return;
 
+    const userId = currentUserIdRef.current;
+
+    // Stop typing indicator immediately on send
+    if (userId) broadcastTyping(userId, activeConversation.id, false);
+    if (typingBroadcastRef.current) clearTimeout(typingBroadcastRef.current);
+
     setSendingMessage(true);
+    const text = messageText.trim();
+    setMessageText("");
+
     try {
-      const response = await messagesApi.sendMessage(activeConversation.id, messageText.trim());
+      const response = await messagesApi.sendMessage(activeConversation.id, text);
       if (response.success && response.data) {
-        setMessages((prev) => [...prev, response.data!.message as Message]);
-        setMessageText("");
-        // Update conversation list
-        const convResponse = await messagesApi.getConversations();
-        if (convResponse.success && convResponse.data) {
-          setConversations((convResponse.data.conversations as Conversation[]) || []);
-        }
+        const newMsg = response.data.message as Message;
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === newMsg.id)) return prev;
+          return [...prev, newMsg];
+        });
+        refreshConversations();
       }
     } catch (error) {
       console.error("Error sending message:", error);
+      setMessageText(text); // restore on failure
     } finally {
       setSendingMessage(false);
     }
@@ -166,15 +261,12 @@ const MessagesPage = () => {
     try {
       const response = await messagesApi.sendMessage(selectedRecipient.id, composeMessage.trim());
       if (response.success) {
-        // Refresh conversations and open the new thread
         const convResponse = await messagesApi.getConversations();
         if (convResponse.success && convResponse.data) {
           const convs = (convResponse.data.conversations as Conversation[]) || [];
           setConversations(convs);
           const newConv = convs.find((c) => c.id === selectedRecipient.id);
-          if (newConv) {
-            setActiveConversation(newConv);
-          }
+          if (newConv) setActiveConversation(newConv);
         }
         setShowCompose(false);
         setSelectedRecipient(null);
@@ -231,7 +323,7 @@ const MessagesPage = () => {
           </button>
         </div>
 
-        <div className="flex gap-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden min-h-[600px]">
+        <div className="flex gap-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden" style={{ height: 'calc(100vh - 200px)', minHeight: '500px' }}>
           {/* Conversations List (Left Panel) */}
           <div className="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 flex flex-col">
             <div className="p-3 border-b border-gray-200 dark:border-gray-700">
@@ -418,8 +510,8 @@ const MessagesPage = () => {
                   </div>
                 </div>
 
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {/* Messages — fixed height, internal scroll only */}
+                <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
                   {loadingMessages ? (
                     <div className="flex items-center justify-center py-12">
                       <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
@@ -447,6 +539,16 @@ const MessagesPage = () => {
                       );
                     })
                   )}
+                  {/* Typing indicator */}
+                  {isOtherUserTyping && (
+                    <div className="flex justify-start">
+                      <div className="bg-gray-100 dark:bg-gray-700 px-4 py-2.5 rounded-2xl rounded-bl-md flex items-center gap-1.5">
+                        <span className="w-2 h-2 bg-gray-400 dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-2 h-2 bg-gray-400 dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-2 h-2 bg-gray-400 dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                    </div>
+                  )}
                   <div ref={messagesEndRef} />
                 </div>
 
@@ -456,7 +558,7 @@ const MessagesPage = () => {
                     <input
                       type="text"
                       value={messageText}
-                      onChange={(e) => setMessageText(e.target.value)}
+                      onChange={(e) => handleMessageInput(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
                           e.preventDefault();

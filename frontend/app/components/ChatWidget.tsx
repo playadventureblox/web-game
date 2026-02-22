@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { MessageSquare, X, Settings, Minimize2, Send } from "lucide-react";
 import { messagesApi, friendsApi } from "@/lib/api";
-import { sendChatMessage, subscribeToMessages, unsubscribeFromMessages, markMessagesAsRead } from "@/lib/realtime";
+import { sendChatMessage, subscribeToMessages, unsubscribeFromMessages, markMessagesAsRead, subscribeToTyping, unsubscribeFromTyping, broadcastTyping } from "@/lib/realtime";
 import { useRealtime } from "@/contexts/RealtimeContext";
 import type { ChatMessage } from "@/lib/realtime";
 
@@ -53,8 +53,21 @@ export default function ChatWidget() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [typingUsers, setTypingUsers] = useState<{ [key: string]: boolean }>({});
+  const typingTimeouts = useRef<{ [key: string]: NodeJS.Timeout }>({});
+  const typingBroadcastTimeouts = useRef<{ [key: string]: NodeJS.Timeout }>({});
+  const currentUserIdRef = useRef<string | null>(null);
   const { presenceMap } = useRealtime();
   const messagesEndRef = useRef<{ [key: string]: HTMLDivElement | null }>({});
+
+  // Decode current user ID once
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      currentUserIdRef.current = payload.userId;
+    } catch {}
+  }, []);
 
   // Register global chat opener
   useEffect(() => {
@@ -85,40 +98,40 @@ export default function ChatWidget() {
     loadConversations();
   }, []);
 
-  // Subscribe to messages for open chats
+  // Subscribe to messages + typing for open chats
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) return;
+    const userId = currentUserIdRef.current;
+    if (!userId) return;
 
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const userId = payload.userId;
-
-    // Subscribe to each open chat
     openChats.forEach(chat => {
       subscribeToMessages(userId, chat.id, (message: ChatMessage) => {
-        // Add to chat messages
-        setOpenChats(prev => prev.map(c => {
-          if (c.id === chat.id) {
-            return {
-              ...c,
-              messages: [...c.messages, message]
-            };
-          }
-          return c;
-        }));
-
-        // Update conversations list
+        setOpenChats(prev => prev.map(c =>
+          c.id === chat.id ? { ...c, messages: [...c.messages.filter(m => m.id !== message.id), message] } : c
+        ));
         loadConversations();
-
-        // Mark as read
         markMessagesAsRead(message.sender_id);
+        // Scroll to bottom
+        setTimeout(() => {
+          const el = messagesEndRef.current[chat.id];
+          el?.scrollIntoView({ behavior: 'smooth' });
+        }, 50);
+      });
+
+      subscribeToTyping(userId, chat.id, (isTyping) => {
+        setTypingUsers(prev => ({ ...prev, [chat.id]: isTyping }));
+        if (typingTimeouts.current[chat.id]) clearTimeout(typingTimeouts.current[chat.id]);
+        if (isTyping) {
+          typingTimeouts.current[chat.id] = setTimeout(() => {
+            setTypingUsers(prev => ({ ...prev, [chat.id]: false }));
+          }, 3000);
+        }
       });
     });
 
-    // Cleanup subscriptions
     return () => {
       openChats.forEach(chat => {
         unsubscribeFromMessages(userId, chat.id);
+        unsubscribeFromTyping(userId, chat.id);
       });
     };
   }, [openChats.map(c => c.id).join(',')]);
@@ -230,7 +243,17 @@ export default function ChatWidget() {
 
   const handleInputChange = (chatId: string, value: string) => {
     setMessageInputs({ ...messageInputs, [chatId]: value });
-    // Typing indicators removed - can be added via Supabase Broadcast if needed
+
+    const userId = currentUserIdRef.current;
+    if (!userId) return;
+
+    // Broadcast typing
+    broadcastTyping(userId, chatId, true);
+
+    if (typingBroadcastTimeouts.current[chatId]) clearTimeout(typingBroadcastTimeouts.current[chatId]);
+    typingBroadcastTimeouts.current[chatId] = setTimeout(() => {
+      broadcastTyping(userId, chatId, false);
+    }, 1500);
   };
 
   const formatTime = (dateString: string) => {
@@ -456,10 +479,10 @@ export default function ChatWidget() {
                 })}
                 {typingUsers[chat.id] && (
                   <div className="flex justify-start">
-                    <div className="bg-gray-200 dark:bg-gray-700 rounded-lg px-3 py-2">
-                      <p className="text-sm text-gray-600 dark:text-gray-400 italic">
-                        {chat.name} is typing...
-                      </p>
+                    <div className="bg-gray-200 dark:bg-gray-700 rounded-2xl rounded-bl-md px-3 py-2.5 flex items-center gap-1">
+                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                     </div>
                   </div>
                 )}

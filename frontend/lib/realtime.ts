@@ -25,6 +25,7 @@ export interface PresenceData {
 // Global channel references
 let presenceChannel: RealtimeChannel | null = null;
 let messageChannels: Map<string, RealtimeChannel> = new Map();
+let typingChannels: Map<string, RealtimeChannel> = new Map();
 
 /**
  * Initialize presence tracking with Supabase Realtime
@@ -165,7 +166,8 @@ export const disconnectPresence = async () => {
 };
 
 /**
- * Subscribe to messages for a specific conversation
+ * Subscribe to messages for a specific conversation.
+ * Listens for messages where the current user is either sender OR receiver.
  */
 export const subscribeToMessages = (
   userId: string,
@@ -180,7 +182,7 @@ export const subscribeToMessages = (
     supabase.removeChannel(existingChannel);
   }
 
-  // Create new channel for this conversation
+  // Listen for messages where current user is the RECEIVER (incoming messages)
   const channel = supabase
     .channel(channelName)
     .on(
@@ -193,35 +195,31 @@ export const subscribeToMessages = (
       },
       async (payload: any) => {
         const newMessage = payload.new as any;
+        // Only process if it's from the other user in this conversation
+        if (newMessage.senderId !== otherUserId) return;
 
-        // Only process if it's from the other user
-        if (newMessage.senderId === otherUserId) {
-          // Fetch sender details
-          const { data: sender } = await supabase
-            .from('users')
-            .select('username, displayName, avatarUrl')
-            .eq('id', newMessage.senderId)
-            .single();
+        const { data: sender } = await supabase
+          .from('users')
+          .select('username, displayName, avatarUrl')
+          .eq('id', newMessage.senderId)
+          .single();
 
-          const messageWithSender: ChatMessage = {
-            id: newMessage.id,
-            sender_id: newMessage.senderId,
-            receiver_id: newMessage.receiverId,
-            content: newMessage.content,
-            is_read: newMessage.isRead,
-            created_at: newMessage.createdAt,
-            sender_username: sender?.username,
-            sender_display_name: sender?.displayName,
-            sender_avatar_url: sender?.avatarUrl,
-          };
-
-          onMessage(messageWithSender);
-        }
+        onMessage({
+          id: newMessage.id,
+          sender_id: newMessage.senderId,
+          receiver_id: newMessage.receiverId,
+          content: newMessage.content,
+          is_read: newMessage.isRead,
+          created_at: newMessage.createdAt,
+          sender_username: sender?.username,
+          sender_display_name: sender?.displayName,
+          sender_avatar_url: sender?.avatarUrl,
+        });
       }
     )
     .subscribe((status: string) => {
       if (status === 'SUBSCRIBED') {
-        console.log(`✅ Subscribed to messages with ${otherUserId}`);
+        console.log(`✅ Subscribed to messages channel with ${otherUserId}`);
       }
     });
 
@@ -235,10 +233,70 @@ export const subscribeToMessages = (
 export const unsubscribeFromMessages = async (userId: string, otherUserId: string) => {
   const channelName = `messages:${[userId, otherUserId].sort().join('-')}`;
   const channel = messageChannels.get(channelName);
-
   if (channel) {
     await supabase.removeChannel(channel);
     messageChannels.delete(channelName);
+  }
+};
+
+/**
+ * Subscribe to typing indicators for a conversation via Broadcast.
+ * Returns cleanup function.
+ */
+export const subscribeToTyping = (
+  userId: string,
+  otherUserId: string,
+  onTyping: (isTyping: boolean, fromUserId: string) => void
+): RealtimeChannel => {
+  const channelName = `typing:${[userId, otherUserId].sort().join('-')}`;
+
+  const existingChannel = typingChannels.get(channelName);
+  if (existingChannel) {
+    supabase.removeChannel(existingChannel);
+  }
+
+  const channel = supabase
+    .channel(channelName)
+    .on('broadcast', { event: 'typing' }, (payload: any) => {
+      // Only react to typing events from the other user
+      if (payload.payload?.userId === otherUserId) {
+        onTyping(payload.payload.isTyping, payload.payload.userId);
+      }
+    })
+    .subscribe();
+
+  typingChannels.set(channelName, channel);
+  return channel;
+};
+
+/**
+ * Broadcast typing status to the other user.
+ */
+export const broadcastTyping = async (
+  userId: string,
+  otherUserId: string,
+  isTyping: boolean
+): Promise<void> => {
+  const channelName = `typing:${[userId, otherUserId].sort().join('-')}`;
+  const channel = typingChannels.get(channelName);
+  if (!channel) return;
+
+  await channel.send({
+    type: 'broadcast',
+    event: 'typing',
+    payload: { userId, isTyping },
+  });
+};
+
+/**
+ * Unsubscribe from typing channel
+ */
+export const unsubscribeFromTyping = async (userId: string, otherUserId: string) => {
+  const channelName = `typing:${[userId, otherUserId].sort().join('-')}`;
+  const channel = typingChannels.get(channelName);
+  if (channel) {
+    await supabase.removeChannel(channel);
+    typingChannels.delete(channelName);
   }
 };
 
@@ -353,6 +411,12 @@ export const cleanupRealtimeChannels = async () => {
     await supabase.removeChannel(channel);
   }
   messageChannels.clear();
+
+  // Remove all typing channels
+  for (const channel of typingChannels.values()) {
+    await supabase.removeChannel(channel);
+  }
+  typingChannels.clear();
 
   console.log('🧹 Realtime channels cleaned up');
 };

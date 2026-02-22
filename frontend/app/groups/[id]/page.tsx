@@ -131,7 +131,13 @@ const GroupDetailPage = () => {
       try {
         const response = await groupsApi.getGroupById(groupId);
         if (response.success && response.data) {
-          setCurrentGroupDetails(response.data.group as Group);
+          const group = response.data.group as Group;
+          setCurrentGroupDetails(group);
+          // Redirect old UUID URLs to canonical groupNumber/slug URL
+          const isUUID = /^[0-9a-f-]{36}$/i.test(groupId);
+          if (isUUID && group.group_number) {
+            router.replace(`/groups/${group.group_number}/${groupSlug(group.name)}`);
+          }
         }
       } catch (error) {
         console.error("Error fetching group details:", error);
@@ -139,7 +145,7 @@ const GroupDetailPage = () => {
     };
 
     fetchGroupDetails();
-  }, [groupId]);
+  }, [groupId, router]);
 
   // Fetch alliances
   useEffect(() => {

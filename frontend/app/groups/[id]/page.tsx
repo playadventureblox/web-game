@@ -15,7 +15,7 @@ import DescriptionSection from "../../components/groups/DescriptionSection";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import ReportModal from "@/components/modals/ReportModal";
 import SuccessModal from "@/components/modals/SuccessModal";
-import { groupsApi } from "@/lib/api";
+import { groupsApi, storage } from "@/lib/api";
 
 interface Group {
   id: string;
@@ -47,6 +47,20 @@ const GroupDetailPage = () => {
   const params = useParams();
   const router = useRouter();
   const groupId = params.id as string;
+
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Decode current user ID from JWT token
+  useEffect(() => {
+    const token = storage.getAccessToken();
+    if (!token) return;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      setCurrentUserId(payload.userId || null);
+    } catch {
+      // not logged in
+    }
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -703,7 +717,7 @@ const GroupDetailPage = () => {
                           {currentGroup.role ? (
                             <>
                               {/* Admin Options - Only show if user is Owner */}
-                              {currentGroup.role === "Owner" && (
+                              {currentGroup.owner_id === currentUserId && (
                                 <>
                                   <Link href={`/groups/${groupId}/configure`}>
                                     <button
@@ -775,7 +789,7 @@ const GroupDetailPage = () => {
                               </button>
 
                               {/* Owner Only Option */}
-                              {currentGroup.role === "Owner" && (
+                              {currentGroup.owner_id === currentUserId && (
                                 <button
                                   onClick={() => {
                                     alert("Change Owner");
@@ -1325,7 +1339,7 @@ const GroupDetailPage = () => {
                   <p className="text-gray-600 dark:text-gray-400">
                     No alliances yet
                   </p>
-                  {currentGroup?.role === "Owner" && (
+                  {currentGroup?.owner_id === currentUserId && (
                     <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
                       Send alliance requests to other groups from the Configure page
                     </p>
@@ -1341,7 +1355,7 @@ const GroupDetailPage = () => {
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   Events
                 </h2>
-                {currentGroup?.role === "Owner" && (
+                {currentGroup?.owner_id === currentUserId && (
                   <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors">
                     Create Event
                   </button>
@@ -1409,25 +1423,25 @@ const GroupDetailPage = () => {
           }
         }}
         title={
-          currentGroupDetails?.role === "Owner"
+          currentGroupDetails?.owner_id === currentUserId
             ? "Leave Group / Delete Group"
             : "Leave Group"
         }
         message={
-          currentGroupDetails?.role === "Owner"
+          currentGroupDetails?.owner_id === currentUserId
             ? (currentGroupDetails?.member_count ?? 0) > 1
               ? "As the owner, you cannot leave while there are other members. Remove all members first, then you can leave to delete the group."
               : "You are the last member and the owner. Leaving will permanently delete this group. This action cannot be undone."
             : "Are you sure you want to leave this group? This action cannot be undone."
         }
         confirmText={
-          currentGroupDetails?.role === "Owner" &&
+          currentGroupDetails?.owner_id === currentUserId &&
           currentGroupDetails?.member_count === 1
             ? "Delete Group"
             : "Leave Group"
         }
         cancelText={
-          currentGroupDetails?.role === "Owner" &&
+          currentGroupDetails?.owner_id === currentUserId &&
           currentGroupDetails?.member_count > 1
             ? "Close"
             : "Cancel"
@@ -1435,7 +1449,7 @@ const GroupDetailPage = () => {
         variant="danger"
         loading={actionLoading}
         disabled={
-          currentGroupDetails?.role === "Owner" &&
+          currentGroupDetails?.owner_id === currentUserId &&
           (currentGroupDetails?.member_count ?? 0) > 1
         }
       />

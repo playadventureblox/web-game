@@ -20,7 +20,7 @@ import Sidebar from "../../../components/Sidebar";
 import Header from "../../../components/Header";
 
 import { ThemeToggle } from "../../../components/ThemeToggle";
-import { groupsApi, uploadApi } from "@/lib/api";
+import { groupsApi, uploadApi, storage } from "@/lib/api";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import SuccessModal from "@/components/modals/SuccessModal";
 import { Loader2 } from "lucide-react";
@@ -52,6 +52,20 @@ const ConfigureGroupPage = () => {
   const params = useParams();
   const router = useRouter();
   const groupId = params.id as string;
+
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Decode current user ID from JWT token
+  useEffect(() => {
+    const token = storage.getAccessToken();
+    if (!token) return;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      setCurrentUserId(payload.userId || null);
+    } catch {
+      // not logged in
+    }
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -651,8 +665,8 @@ const ConfigureGroupPage = () => {
     setPendingRoleChange(null);
   };
 
-  // Check if user is owner
-  const isOwner = groupData?.role === "Owner";
+  // Check if user is owner by comparing user ID to group owner_id (rank-independent)
+  const isOwner = !!currentUserId && groupData?.owner_id === currentUserId;
 
   const handleEmblemUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1144,7 +1158,7 @@ const ConfigureGroupPage = () => {
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
                   </div>
-                ) : !isOwner ? (
+                ) : !isOwner && currentUserId !== null ? (
                   <div className="text-center py-12">
                     <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                       Access Denied

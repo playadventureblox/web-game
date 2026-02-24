@@ -1173,7 +1173,8 @@ const ConfigureGroupPage = () => {
                     </Link>
                   </div>
                 ) : (
-                  activeSection === "Information" && (
+                  <>
+                  {activeSection === "Information" && (
                     <div className="space-y-8">
                       {/* Group Name */}
                       <div>
@@ -1367,8 +1368,7 @@ const ConfigureGroupPage = () => {
                         </Link>
                       </div>
                     </div>
-                  )
-                )}
+                  )}
 
                 {activeSection === "Settings" && (
                   <div className="space-y-8">
@@ -3102,6 +3102,8 @@ const ConfigureGroupPage = () => {
                       </div>
                     )}
                   </div>
+                )}
+                  </>
                 )}
               </div>
             </div>

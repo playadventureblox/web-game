@@ -129,8 +129,13 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     const token = localStorage.getItem('accessToken');
     if (!token) return;
 
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const userId = payload.userId;
+    let userId: string;
+    try {
+      const decoded = JSON.parse(atob(token.split('.')[1]));
+      userId = decoded.userId;
+    } catch {
+      return;
+    }
 
     const channel = supabase
       .channel(`notifications:${userId}`)
@@ -142,28 +147,49 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
           table: 'notifications',
           filter: `userId=eq.${userId}`,
         },
-        (payload: any) => {
-          const newNotification = {
-            id: payload.new.id,
-            type: payload.new.type,
-            content: payload.new.content,
-            is_read: payload.new.isRead,
-            created_at: payload.new.createdAt,
-            related_user_id: payload.new.relatedUserId,
-            related_item_id: payload.new.relatedItemId,
+        async (event: any) => {
+          const raw = event.new;
+
+          // Build a minimal notification first so count/bell updates instantly
+          const minimal: Notification = {
+            id: raw.id,
+            type: raw.type,
+            content: raw.content,
+            is_read: raw.isRead ?? false,
+            created_at: raw.createdAt,
+            related_user_id: raw.relatedUserId,
+            related_item_id: raw.relatedItemId,
           };
 
-          // Add to notifications list
-          setNotifications(prev => [newNotification as Notification, ...prev]);
+          setNotifications(prev => [minimal, ...prev]);
           setUnreadCount(prev => prev + 1);
 
-          // Show toast notification
-          showToast(newNotification as Notification);
+          // Fetch the full notification with joined user data so the toast
+          // shows the sender's name and avatar
+          try {
+            const full = await notificationsApi.getNotifications();
+            if (full.success && full.data?.notifications) {
+              const enriched = full.data.notifications.find(
+                (n: Notification) => n.id === raw.id
+              );
+              if (enriched) {
+                setNotifications(prev =>
+                  prev.map(n => (n.id === raw.id ? enriched : n))
+                );
+                showToast(enriched);
+                return;
+              }
+            }
+          } catch {
+            // fallback: show toast with minimal data
+          }
 
-          console.log('🔔 New notification received:', newNotification);
+          showToast(minimal);
         }
       )
-      .subscribe();
+      .subscribe((status: string) => {
+        console.log('🔔 Notification channel status:', status);
+      });
 
     return () => {
       channel.unsubscribe();

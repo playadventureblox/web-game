@@ -135,9 +135,9 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
                       </span>
                       {notification.type === 'friend_request' && ' sent you a friend request'}
                       {notification.type === 'friend_request_accepted' && ' accepted your friend request'}
-                      {notification.type === 'new_message' && ' sent you a message'}
+                      {(notification.type === 'message' || notification.type === 'new_message') && ' sent you a message'}
                     </p>
-                    {notification.type === 'new_message' && notification.content && (
+                    {(notification.type === 'message' || notification.type === 'new_message') && notification.content && (
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate italic">
                         &ldquo;{notification.content}&rdquo;
                       </p>
@@ -187,7 +187,7 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
                   )}
 
                   {/* Reply button for new messages */}
-                  {notification.type === 'new_message' && notification.related_user_id && (
+                  {(notification.type === 'message' || notification.type === 'new_message') && notification.related_user_id && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

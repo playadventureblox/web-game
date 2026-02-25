@@ -217,6 +217,17 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
       [messageId, senderId, receiverId, content.trim()]
     );
 
+    // Create notification for the receiver (backend has direct DB access — no RLS)
+    try {
+      await db.query(
+        `INSERT INTO notifications (id, "userId", type, content, "relatedUserId", "isRead", "createdAt")
+         VALUES (gen_random_uuid()::TEXT, $1, 'message', $2, $3, false, NOW())`,
+        [receiverId, content.trim().slice(0, 100), senderId]
+      );
+    } catch (notifErr) {
+      console.error('Failed to create message notification:', notifErr);
+    }
+
     return res.status(201).json({
       success: true,
       data: {
@@ -230,6 +241,34 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
       message: "Internal server error",
       error: process.env.NODE_ENV === "development" ? error : undefined,
     });
+  }
+};
+
+/**
+ * @route   PUT /api/v1/messages/:senderId/read-all
+ * @desc    Mark all messages from a sender as read
+ * @access  Private
+ */
+export const markConversationAsRead = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { senderId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    await db.query(
+      `UPDATE messages
+       SET "isRead" = true, "readAt" = NOW()
+       WHERE "receiverId" = $1 AND "senderId" = $2 AND "isRead" = false`,
+      [userId, senderId]
+    );
+
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    console.error("Mark conversation as read error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 

@@ -6,6 +6,7 @@ import { MessageSquare, X, Settings, Minimize2, Send } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { messagesApi, friendsApi } from "@/lib/api";
 import { sendChatMessage, subscribeToMessages, unsubscribeFromMessages, markMessagesAsRead, subscribeToTyping, unsubscribeFromTyping, broadcastTyping } from "@/lib/realtime";
+import { supabase } from "@/lib/supabase";
 import { useRealtime } from "@/contexts/RealtimeContext";
 import type { ChatMessage } from "@/lib/realtime";
 
@@ -63,6 +64,8 @@ export default function ChatWidget() {
   const currentUserIdRef = useRef<string | null>(null);
   const { presenceMap } = useRealtime();
   const messagesEndRef = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const openChatsRef = useRef<ChatWindow[]>([]);
+  openChatsRef.current = openChats;
 
   // Decode current user ID once
   useEffect(() => {
@@ -103,6 +106,67 @@ export default function ChatWidget() {
     loadConversations();
   }, []);
 
+  // Global incoming-message listener — keeps unread counts and conversation
+  // list up-to-date WITHOUT a full API re-fetch every time
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+    let userId: string;
+    try {
+      userId = JSON.parse(atob(token.split('.')[1])).userId;
+    } catch {
+      return;
+    }
+
+    const channel = supabase
+      .channel(`chat-widget-incoming:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `receiverId=eq.${userId}`,
+        },
+        (event: any) => {
+          const msg = event.new;
+          const senderId: string = msg.senderId;
+
+          // If the sender's chat window is already open, the per-chat
+          // subscribeToMessages handler adds the bubble — just mark read
+          const isOpen = openChatsRef.current.some(c => c.id === senderId);
+
+          // Always update the conversations list in-memory
+          setConversations(prev => {
+            const existing = prev.find(c => c.id === senderId);
+            if (existing) {
+              return prev.map(c =>
+                c.id === senderId
+                  ? {
+                      ...c,
+                      last_message: msg.content,
+                      last_message_time: msg.createdAt,
+                      unread_count: isOpen ? 0 : (c.unread_count || 0) + 1,
+                    }
+                  : c
+              ).sort((a, b) =>
+                new Date(b.last_message_time || 0).getTime() -
+                new Date(a.last_message_time || 0).getTime()
+              );
+            }
+            // New conversation — fetch to get user info
+            loadConversations();
+            return prev;
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   // Subscribe to messages + typing for open chats
   useEffect(() => {
     const userId = currentUserIdRef.current;
@@ -113,7 +177,12 @@ export default function ChatWidget() {
         setOpenChats(prev => prev.map(c =>
           c.id === chat.id ? { ...c, messages: [...c.messages.filter(m => m.id !== message.id), message] } : c
         ));
-        loadConversations();
+        // Update conversation preview in-memory, clear unread since window is open
+        setConversations(prev => prev.map(c =>
+          c.id === chat.id
+            ? { ...c, last_message: message.content, last_message_time: message.created_at, unread_count: 0 }
+            : c
+        ));
         markMessagesAsRead(message.sender_id);
         // Scroll to bottom
         setTimeout(() => {
@@ -197,6 +266,9 @@ export default function ChatWidget() {
       setOpenChats([...openChats, newChat]);
       loadMessages(conv.id);
     }
+    // Clear unread badge immediately
+    setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c));
+    markMessagesAsRead(conv.id);
     setIsChatListOpen(false);
   };
 

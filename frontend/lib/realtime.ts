@@ -304,7 +304,8 @@ export const unsubscribeFromTyping = async (userId: string, otherUserId: string)
 };
 
 /**
- * Send a chat message
+ * Send a chat message via the backend REST API.
+ * The backend inserts the message AND creates the notification, bypassing RLS.
  */
 export const sendChatMessage = async (
   receiverId: string,
@@ -316,68 +317,44 @@ export const sendChatMessage = async (
       return { success: false, error: 'Not authenticated' };
     }
 
-    // Decode JWT to get senderId
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const senderId = payload.userId;
-
     if (!content || !content.trim() || content.length > 2000) {
       return { success: false, error: 'Invalid message content' };
     }
 
-    // Insert message into database
-    const { data, error } = await supabase
-      .from('messages')
-      .insert({
-        senderId,
-        receiverId,
-        content: content.trim(),
-        isRead: false,
-        createdAt: new Date().toISOString(),
-      })
-      .select(
-        `
-        id,
-        senderId,
-        receiverId,
-        content,
-        isRead,
-        createdAt
-      `
-      )
-      .single();
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const senderId = payload.userId;
+    const username = payload.username;
 
-    if (error) {
-      console.error('Error sending message:', error);
-      return { success: false, error: 'Failed to send message' };
-    }
+    const API_BASE_URL =
+      process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
-    // Fetch sender details
-    const { data: sender } = await supabase
-      .from('users')
-      .select('username, displayName, avatarUrl')
-      .eq('id', senderId)
-      .single();
-
-    // Create a notification for the receiver so the bell + toast fire
-    await supabase.from('notifications').insert({
-      userId: receiverId,
-      type: 'new_message',
-      content: content.trim().slice(0, 100),
-      relatedUserId: senderId,
-      isRead: false,
-      createdAt: new Date().toISOString(),
+    const res = await fetch(`${API_BASE_URL}/messages/${receiverId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ content: content.trim() }),
     });
 
+    const json = await res.json();
+
+    if (!json.success || !json.data?.message) {
+      return { success: false, error: json.message || 'Failed to send message' };
+    }
+
+    const msg = json.data.message;
+
     const messageWithSender: ChatMessage = {
-      id: data.id,
-      sender_id: data.senderId,
-      receiver_id: data.receiverId,
-      content: data.content,
-      is_read: data.isRead,
-      created_at: data.createdAt,
-      sender_username: sender?.username,
-      sender_display_name: sender?.displayName,
-      sender_avatar_url: sender?.avatarUrl,
+      id: msg.id,
+      sender_id: msg.sender_id,
+      receiver_id: msg.receiver_id,
+      content: msg.content,
+      is_read: msg.is_read,
+      created_at: msg.created_at,
+      sender_username: username,
+      sender_display_name: undefined,
+      sender_avatar_url: undefined,
     };
 
     return { success: true, message: messageWithSender };
@@ -388,25 +365,23 @@ export const sendChatMessage = async (
 };
 
 /**
- * Mark messages as read
+ * Mark messages as read via backend REST API (bypasses RLS)
  */
 export const markMessagesAsRead = async (senderId: string): Promise<void> => {
   try {
     const token = storage.getAccessToken();
     if (!token) return;
 
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const userId = payload.userId;
+    const API_BASE_URL =
+      process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
-    await supabase
-      .from('messages')
-      .update({
-        isRead: true,
-        readAt: new Date().toISOString(),
-      })
-      .eq('receiverId', userId)
-      .eq('senderId', senderId)
-      .eq('isRead', false);
+    await fetch(`${API_BASE_URL}/messages/${senderId}/read-all`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
   } catch (error) {
     console.error('Error marking messages as read:', error);
   }

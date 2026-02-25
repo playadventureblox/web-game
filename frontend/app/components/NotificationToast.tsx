@@ -55,13 +55,13 @@ export default function NotificationToast() {
                 <p className="text-sm text-gray-900 dark:text-gray-100 font-medium mb-1">
                   {toast.notification.type === 'friend_request' && '🤝 New Friend Request'}
                   {toast.notification.type === 'friend_request_accepted' && '✅ Friend Request Accepted'}
-                  {toast.notification.type === 'new_message' && '💬 New Message'}
+                  {(toast.notification.type === 'message' || toast.notification.type === 'new_message') && '💬 New Message'}
                 </p>
                 <p className="text-xs text-gray-600 dark:text-gray-400">
                   {toast.notification.related_display_name || toast.notification.related_username}
                   {toast.notification.type === 'friend_request' && ' wants to be your friend'}
                   {toast.notification.type === 'friend_request_accepted' && ' accepted your friend request'}
-                  {toast.notification.type === 'new_message' && `: ${toast.notification.content}`}
+                  {(toast.notification.type === 'message' || toast.notification.type === 'new_message') && `: ${toast.notification.content}`}
                 </p>
               </div>
 

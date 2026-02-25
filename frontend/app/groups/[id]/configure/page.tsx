@@ -77,6 +77,7 @@ const ConfigureGroupPage = () => {
 
   // Group data
   const [groupData, setGroupData] = useState<any>(null);
+  const [groupUuid, setGroupUuid] = useState<string | null>(null);
 
   // Modal states
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -234,6 +235,7 @@ const ConfigureGroupPage = () => {
         if (response.success && response.data) {
           const group = response.data.group as any;
           setGroupData(group);
+          setGroupUuid(group.id);
           setGroupName(group.name || "");
           setGroupDescription(group.description || "");
           setIconUrl(group.icon_url || "");
@@ -241,64 +243,66 @@ const ConfigureGroupPage = () => {
           setJoinSetting(group.join_setting || "open");
           setEmblemPreview(group.icon_url || null);
           setCoverPreview(group.cover_photo_url || null);
-        }
 
-        // Fetch group settings
-        const settingsResponse = await groupsApi.getGroupSettings(groupId);
-        if (settingsResponse.success && settingsResponse.data) {
-          const settings = settingsResponse.data.settings as any;
-          const manualApprovalValue = settings.manual_approval || false;
-          setManualApproval(manualApprovalValue);
-          setAccountAge(settings.account_age_requirement || "none");
+          const uuid = group.id;
 
-          // Sync joinSetting with manual approval
-          if (manualApprovalValue && joinSetting === "open") {
-            setJoinSetting("approval");
+          // Fetch group settings
+          const settingsResponse = await groupsApi.getGroupSettings(uuid);
+          if (settingsResponse.success && settingsResponse.data) {
+            const settings = settingsResponse.data.settings as any;
+            const manualApprovalValue = settings.manual_approval || false;
+            setManualApproval(manualApprovalValue);
+            setAccountAge(settings.account_age_requirement || "none");
+
+            // Sync joinSetting with manual approval
+            if (manualApprovalValue && group.join_setting === "open") {
+              setJoinSetting("approval");
+            }
           }
-        }
 
-        // Fetch social links
-        const socialResponse = await groupsApi.getGroupSocialLinks(groupId);
-        if (socialResponse.success && socialResponse.data) {
-          const links = socialResponse.data.socialLinks as any;
-          setDiscord(links.discord || "");
-          setTwitter(links.twitter || "");
-          setYoutube(links.youtube || "");
-          setTwitch(links.twitch || "");
-          setFacebook(links.facebook || "");
-          setInstagram(links.instagram || "");
-          setTiktok(links.tiktok || "");
-          setWebsite(links.website || "");
-        }
+          // Fetch social links
+          const socialResponse = await groupsApi.getGroupSocialLinks(uuid);
+          if (socialResponse.success && socialResponse.data) {
+            const links = socialResponse.data.socialLinks as any;
+            setDiscord(links.discord || "");
+            setTwitter(links.twitter || "");
+            setYoutube(links.youtube || "");
+            setTwitch(links.twitch || "");
+            setFacebook(links.facebook || "");
+            setInstagram(links.instagram || "");
+            setTiktok(links.tiktok || "");
+            setWebsite(links.website || "");
+          }
 
-        // Fetch members
-        const membersResponse = await groupsApi.getGroupMembers(groupId);
-        if (membersResponse.success && membersResponse.data) {
-          setMembers((membersResponse.data.members as any[]) || []);
-        }
+          // Fetch members
+          const membersResponse = await groupsApi.getGroupMembers(uuid);
+          if (membersResponse.success && membersResponse.data) {
+            setMembers((membersResponse.data.members as any[]) || []);
+          }
 
-        // Fetch join requests
-        const joinRequestsResponse = await groupsApi.getJoinRequests(groupId);
-        if (joinRequestsResponse.success && joinRequestsResponse.data) {
-          setJoinRequests((joinRequestsResponse.data.requests as any[]) || []);
-        }
+          // Fetch join requests
+          const joinRequestsResponse = await groupsApi.getJoinRequests(uuid);
+          if (joinRequestsResponse.success && joinRequestsResponse.data) {
+            setJoinRequests((joinRequestsResponse.data.requests as any[]) || []);
+          }
 
-        // Fetch roles for members section
-        const rolesResponse = await groupsApi.getGroupRoles(groupId);
-        if (rolesResponse.success && rolesResponse.data) {
-          setRoles((rolesResponse.data.roles as any[]) || []);
-        }
+          // Fetch roles for members section
+          const rolesResponse = await groupsApi.getGroupRoles(uuid);
+          if (rolesResponse.success && rolesResponse.data) {
+            setRoles((rolesResponse.data.roles as any[]) || []);
+          }
 
-        // Fetch alliances
-        const alliancesResponse = await groupsApi.getGroupAlliances(groupId);
-        if (alliancesResponse.success && alliancesResponse.data) {
-          setAlliances((alliancesResponse.data.alliances as any[]) || []);
-        }
+          // Fetch alliances
+          const alliancesResponse = await groupsApi.getGroupAlliances(uuid);
+          if (alliancesResponse.success && alliancesResponse.data) {
+            setAlliances((alliancesResponse.data.alliances as any[]) || []);
+          }
 
-        // Fetch alliance requests
-        const allianceRequestsResponse = await groupsApi.getAllianceRequests(groupId);
-        if (allianceRequestsResponse.success && allianceRequestsResponse.data) {
-          setAllianceRequests((allianceRequestsResponse.data.requests as any[]) || []);
+          // Fetch alliance requests
+          const allianceRequestsResponse = await groupsApi.getAllianceRequests(uuid);
+          if (allianceRequestsResponse.success && allianceRequestsResponse.data) {
+            setAllianceRequests((allianceRequestsResponse.data.requests as any[]) || []);
+          }
         }
       } catch (error) {
         console.error("Error fetching group data:", error);
@@ -311,11 +315,11 @@ const ConfigureGroupPage = () => {
   }, [groupId]);
 
   const fetchMembers = async () => {
-    if (!groupId) return;
+    if (!groupUuid) return;
 
     setLoadingMembers(true);
     try {
-      const response = await groupsApi.getGroupMembers(groupId);
+      const response = await groupsApi.getGroupMembers(groupUuid);
       if (response.success && response.data) {
         setMembers((response.data.members as any[]) || []);
       }
@@ -327,11 +331,11 @@ const ConfigureGroupPage = () => {
   };
 
   const fetchJoinRequests = async () => {
-    if (!groupId) return;
+    if (!groupUuid) return;
 
     setLoadingRequests(true);
     try {
-      const response = await groupsApi.getJoinRequests(groupId);
+      const response = await groupsApi.getJoinRequests(groupUuid);
       if (response.success && response.data) {
         setJoinRequests((response.data.requests as any[]) || []);
       }
@@ -345,10 +349,10 @@ const ConfigureGroupPage = () => {
   // Fetch roles when Roles section is active (refresh roles list)
   useEffect(() => {
     const fetchRoles = async () => {
-      if (!groupId || activeSection !== "Roles") return;
+      if (!groupUuid || activeSection !== "Roles") return;
       setLoadingRoles(true);
       try {
-        const response = await groupsApi.getGroupRoles(groupId);
+        const response = await groupsApi.getGroupRoles(groupUuid);
         if (response.success && response.data) {
           setRoles((response.data.roles as any[]) || []);
           // Don't auto-select any role - show empty form for creating new role
@@ -366,7 +370,7 @@ const ConfigureGroupPage = () => {
     } else if (activeSection === "Roles") {
       fetchRoles();
     }
-  }, [groupId, activeSection]);
+  }, [groupUuid, activeSection]);
 
   // Helper function to get role name by ID
   const getRoleName = (roleId: string | null) => {
@@ -389,7 +393,7 @@ const ConfigureGroupPage = () => {
         const groups = (response.data.groups as any[]) || [];
         // Filter out current group and already allied groups
         const filtered = groups.filter(
-          (g) => g.id !== groupId && !alliances.some((a) => a.allied_group_id === g.id)
+          (g) => g.id !== groupUuid && !alliances.some((a) => a.allied_group_id === g.id)
         );
         setSearchResults(filtered);
       }
@@ -402,10 +406,10 @@ const ConfigureGroupPage = () => {
 
   // Handle send alliance request
   const handleSendAllianceRequest = async (targetGroupId: string) => {
-    if (!groupId) return;
+    if (!groupUuid) return;
 
     try {
-      const response = await groupsApi.sendAllianceRequest(groupId, targetGroupId);
+      const response = await groupsApi.sendAllianceRequest(groupUuid, targetGroupId);
       if (response.success) {
         setSuccessMessage({
           title: "Success",
@@ -433,17 +437,17 @@ const ConfigureGroupPage = () => {
 
   // Handle accept alliance request
   const handleAcceptAllianceRequest = async (allianceId: string) => {
-    if (!groupId) return;
+    if (!groupUuid) return;
 
     try {
-      const response = await groupsApi.respondToAllianceRequest(groupId, allianceId, "accept");
+      const response = await groupsApi.respondToAllianceRequest(groupUuid, allianceId, "accept");
       if (response.success) {
         // Refresh alliances and requests
-        const alliancesResponse = await groupsApi.getGroupAlliances(groupId);
+        const alliancesResponse = await groupsApi.getGroupAlliances(groupUuid);
         if (alliancesResponse.success && alliancesResponse.data) {
           setAlliances((alliancesResponse.data.alliances as any[]) || []);
         }
-        const requestsResponse = await groupsApi.getAllianceRequests(groupId);
+        const requestsResponse = await groupsApi.getAllianceRequests(groupUuid);
         if (requestsResponse.success && requestsResponse.data) {
           setAllianceRequests((requestsResponse.data.requests as any[]) || []);
         }
@@ -471,13 +475,13 @@ const ConfigureGroupPage = () => {
 
   // Handle decline alliance request
   const handleDeclineAllianceRequest = async (allianceId: string) => {
-    if (!groupId) return;
+    if (!groupUuid) return;
 
     try {
-      const response = await groupsApi.respondToAllianceRequest(groupId, allianceId, "decline");
+      const response = await groupsApi.respondToAllianceRequest(groupUuid, allianceId, "decline");
       if (response.success) {
         // Refresh requests
-        const requestsResponse = await groupsApi.getAllianceRequests(groupId);
+        const requestsResponse = await groupsApi.getAllianceRequests(groupUuid);
         if (requestsResponse.success && requestsResponse.data) {
           setAllianceRequests((requestsResponse.data.requests as any[]) || []);
         }
@@ -505,13 +509,13 @@ const ConfigureGroupPage = () => {
 
   // Handle remove alliance
   const handleRemoveAlliance = async (allianceId: string) => {
-    if (!groupId) return;
+    if (!groupUuid) return;
 
     try {
-      const response = await groupsApi.removeAlliance(groupId, allianceId);
+      const response = await groupsApi.removeAlliance(groupUuid, allianceId);
       if (response.success) {
         // Refresh alliances
-        const alliancesResponse = await groupsApi.getGroupAlliances(groupId);
+        const alliancesResponse = await groupsApi.getGroupAlliances(groupUuid);
         if (alliancesResponse.success && alliancesResponse.data) {
           setAlliances((alliancesResponse.data.alliances as any[]) || []);
         }
@@ -539,10 +543,10 @@ const ConfigureGroupPage = () => {
 
   // Handle accept join request
   const handleAcceptRequest = async (requestId: string) => {
-    if (!groupId) return;
+    if (!groupUuid) return;
 
     try {
-      const response = await groupsApi.acceptJoinRequest(groupId, requestId);
+      const response = await groupsApi.acceptJoinRequest(groupUuid, requestId);
       if (response.success) {
         setSuccessMessage({
           title: "Success",
@@ -571,12 +575,12 @@ const ConfigureGroupPage = () => {
 
   // Handle reject join request
   const handleRejectRequest = async (requestId: string) => {
-    if (!groupId) return;
+    if (!groupUuid) return;
 
     if (!confirm("Are you sure you want to reject this join request?")) return;
 
     try {
-      const response = await groupsApi.rejectJoinRequest(groupId, requestId);
+      const response = await groupsApi.rejectJoinRequest(groupUuid, requestId);
       if (response.success) {
         setSuccessMessage({
           title: "Success",
@@ -615,7 +619,7 @@ const ConfigureGroupPage = () => {
     setAssigningRole(true);
     try {
       const response = await groupsApi.updateMemberRole(
-        groupId,
+        groupUuid || groupId,
         pendingRoleChange.memberId,
         pendingRoleChange.newRoleId
       );
@@ -752,7 +756,7 @@ const ConfigureGroupPage = () => {
   };
 
   const handleSaveInformation = async () => {
-    if (!groupId) return;
+    if (!groupUuid) return;
 
     if (!groupName.trim()) {
       setSuccessMessage({
@@ -774,7 +778,7 @@ const ConfigureGroupPage = () => {
 
     setSaving(true);
     try {
-      const response = await groupsApi.updateGroup(groupId, {
+      const response = await groupsApi.updateGroup(groupUuid || groupId, {
         name: groupName,
         description: groupDescription,
         iconUrl: iconUrl,
@@ -836,11 +840,11 @@ const ConfigureGroupPage = () => {
   };
 
   const handleSaveSettings = async () => {
-    if (!groupId) return;
+    if (!groupUuid) return;
 
     setSaving(true);
     try {
-      const response = await groupsApi.updateGroupSettings(groupId, {
+      const response = await groupsApi.updateGroupSettings(groupUuid, {
         manualApproval,
         accountAgeRequirement: accountAge,
       });
@@ -871,11 +875,11 @@ const ConfigureGroupPage = () => {
   };
 
   const handleSaveSocialLinks = async () => {
-    if (!groupId) return;
+    if (!groupUuid) return;
 
     setSaving(true);
     try {
-      const response = await groupsApi.updateGroupSocialLinks(groupId, {
+      const response = await groupsApi.updateGroupSocialLinks(groupUuid, {
         discord,
         twitter,
         youtube,
@@ -962,7 +966,7 @@ const ConfigureGroupPage = () => {
 
   // Handle saving role (create or update)
   const handleSaveRole = async () => {
-    if (!groupId || !roleName.trim()) return;
+    if (!groupUuid || !roleName.trim()) return;
 
     setSaving(true);
     try {
@@ -989,10 +993,10 @@ const ConfigureGroupPage = () => {
       let response;
       if (selectedRole) {
         // Updating existing role
-        response = await groupsApi.updateGroupRole(groupId, selectedRole.id, roleData);
+        response = await groupsApi.updateGroupRole(groupUuid, selectedRole.id, roleData);
       } else {
         // Creating new role
-        response = await groupsApi.createGroupRole(groupId, roleData);
+        response = await groupsApi.createGroupRole(groupUuid, roleData);
       }
 
       if (response?.success) {
@@ -1002,7 +1006,7 @@ const ConfigureGroupPage = () => {
         });
         setShowSuccessModal(true);
         // Refresh roles list
-        const rolesResponse = await groupsApi.getGroupRoles(groupId);
+        const rolesResponse = await groupsApi.getGroupRoles(groupUuid);
         if (rolesResponse.success && rolesResponse.data) {
           setRoles((rolesResponse.data.roles as any[]) || []);
         }
@@ -1818,7 +1822,7 @@ const ConfigureGroupPage = () => {
                                                 ) {
                                                   const response =
                                                     await groupsApi.removeMember(
-                                                      groupId,
+                                                      groupUuid || groupId,
                                                       member.user_id
                                                     );
                                                   if (response.success) {

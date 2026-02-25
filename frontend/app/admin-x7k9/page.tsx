@@ -39,6 +39,7 @@ export default function AdminPanel() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [apiError, setApiError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ type: 'user' | 'group'; id: string; name: string } | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
@@ -74,21 +75,35 @@ export default function AdminPanel() {
 
   const fetchUsers = async () => {
     setLoading(true);
+    setApiError(null);
     try {
       const r = await fetch(`${API}/admin/users`, { headers });
       const j = await r.json();
-      if (j.success) setUsers(j.data.users);
-    } catch { showToast('Failed to load users', false); }
+      if (j.success) {
+        setUsers(j.data.users);
+      } else {
+        setApiError(`API error (${r.status}): ${j.message || 'Unknown error'}`);
+      }
+    } catch (e: any) {
+      setApiError(`Network error: ${e.message} — Backend may not be deployed yet.`);
+    }
     setLoading(false);
   };
 
   const fetchGroups = async () => {
     setLoading(true);
+    setApiError(null);
     try {
       const r = await fetch(`${API}/admin/groups`, { headers });
       const j = await r.json();
-      if (j.success) setGroups(j.data.groups);
-    } catch { showToast('Failed to load groups', false); }
+      if (j.success) {
+        setGroups(j.data.groups);
+      } else {
+        setApiError(`API error (${r.status}): ${j.message || 'Unknown error'}`);
+      }
+    } catch (e: any) {
+      setApiError(`Network error: ${e.message} — Backend may not be deployed yet.`);
+    }
     setLoading(false);
   };
 
@@ -284,6 +299,14 @@ export default function AdminPanel() {
             </button>
           </div>
         </div>
+
+        {/* API Error Banner */}
+        {apiError && (
+          <div className="mb-4 flex items-start gap-3 bg-red-900/30 border border-red-700/50 text-red-300 rounded-xl px-5 py-4 text-sm">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <span>{apiError}</span>
+          </div>
+        )}
 
         {/* Table */}
         {loading ? (

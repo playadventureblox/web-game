@@ -1,15 +1,16 @@
 import { Request, Response } from "express";
 import db from '../../lib/db.js';
 
-const ADMIN_SECRET = process.env.ADMIN_SECRET || 'adventureblox-admin-secret-2024';
+const ADMIN_SECRET = process.env.ADMIN_SECRET || 'ab-admin-x9k2p7qm4z';
 
 /**
  * Middleware: verify admin secret header
  */
-export const requireAdmin = (req: Request, res: Response, next: any) => {
+export const requireAdmin = (req: Request, res: Response, next: any): void => {
   const secret = req.headers['x-admin-secret'];
   if (!secret || secret !== ADMIN_SECRET) {
-    return res.status(401).json({ success: false, message: 'Unauthorized' });
+    res.status(401).json({ success: false, message: 'Unauthorized' });
+    return;
   }
   next();
 };

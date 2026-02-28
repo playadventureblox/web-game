@@ -49,6 +49,7 @@ const GroupDetailPage = () => {
   const groupId = params.id as string;
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [primaryGroupId, setPrimaryGroupId] = useState<string | null>(null);
 
   // Decode current user ID from JWT token
   useEffect(() => {
@@ -118,14 +119,22 @@ const GroupDetailPage = () => {
   >([]);
   const [loadingAlliances, setLoadingAlliances] = useState(true);
 
-  // Fetch user's groups for sidebar
+  // Fetch user's groups for sidebar + primary group
   useEffect(() => {
     const fetchUserGroups = async () => {
       setLoadingGroups(true);
       try {
-        const response = await groupsApi.getUserGroups();
-        if (response.success && response.data) {
-          setUserGroups((response.data.groups as Group[]) || []);
+        const [groupsResponse, profileResponse] = await Promise.all([
+          groupsApi.getUserGroups(),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'}/users/profile`, {
+            headers: { Authorization: `Bearer ${storage.getAccessToken()}` },
+          }).then(r => r.json()).catch(() => null),
+        ]);
+        if (groupsResponse.success && groupsResponse.data) {
+          setUserGroups((groupsResponse.data.groups as Group[]) || []);
+        }
+        if (profileResponse?.success && profileResponse?.data?.user?.primary_group_id) {
+          setPrimaryGroupId(profileResponse.data.user.primary_group_id);
         }
       } catch (error) {
         console.error("Failed to fetch user groups:", error);
@@ -554,8 +563,11 @@ const GroupDetailPage = () => {
                   No groups yet
                 </p>
               </div>
-            ) : (
-              userGroups.map((group) => {
+            ) : (() => {
+              const primaryGroup = userGroups.find(g => g.id === primaryGroupId);
+              const otherGroups = userGroups.filter(g => g.id !== primaryGroupId);
+
+              const renderGroupItem = (group: Group) => {
                 const href = group.group_number
                   ? `/groups/${group.group_number}/${groupSlug(group.name)}`
                   : `/groups/${group.id}`;
@@ -563,40 +575,59 @@ const GroupDetailPage = () => {
                   groupId === String(group.group_number) ||
                   params.id === String(group.group_number);
                 return (
-                <Link
-                  key={group.id}
-                  href={href}
-                  className={`flex items-center gap-3 py-2 px-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
-                    isActive ? "bg-gray-100 dark:bg-gray-800" : ""
-                  }`}
-                >
-                  <div className="w-10 h-10 rounded overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0 relative">
-                    {group.icon_url ? (
-                      <Image
-                        src={group.icon_url}
-                        alt={group.name}
-                        fill
-                        className="object-cover"
-                        sizes="40px"
-                      />
-                    ) : (
-                      <span className="text-lg flex items-center justify-center w-full h-full">
-                        🎮
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                      {group.name}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {group.member_count} members
-                    </p>
-                  </div>
-                </Link>
+                  <Link
+                    key={group.id}
+                    href={href}
+                    className={`flex items-center gap-3 py-2 px-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
+                      isActive ? "bg-gray-100 dark:bg-gray-800" : ""
+                    }`}
+                  >
+                    <div className="w-10 h-10 rounded overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0 relative">
+                      {group.icon_url ? (
+                        <Image
+                          src={group.icon_url}
+                          alt={group.name}
+                          fill
+                          className="object-cover"
+                          sizes="40px"
+                        />
+                      ) : (
+                        <span className="text-lg flex items-center justify-center w-full h-full">
+                          🎮
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                        {group.name}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {group.member_count?.toLocaleString()} members
+                      </p>
+                    </div>
+                  </Link>
+                );
+              };
+
+              return (
+                <>
+                  {primaryGroup && (
+                    <div className="mb-3">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-2 mb-1">Primary</p>
+                      {renderGroupItem(primaryGroup)}
+                    </div>
+                  )}
+                  {otherGroups.length > 0 && (
+                    <div>
+                      {primaryGroup && (
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-2 mb-1">My Communities</p>
+                      )}
+                      {otherGroups.map(renderGroupItem)}
+                    </div>
+                  )}
+                </>
               );
-              })
-            )}
+            })()}
           </div>
 
           {/* Create Community Button */}

@@ -792,6 +792,7 @@ const GroupDetailPage = () => {
                                       await groupsApi.makePrimaryGroup(groupId);
                                     setActionLoading(false);
                                     if (response.success) {
+                                      setPrimaryGroupId(currentGroupDetails?.id || null);
                                       setSuccessMessage({
                                         title: "Success",
                                         message: "Group set as primary!",

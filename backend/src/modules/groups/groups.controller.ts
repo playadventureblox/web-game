@@ -3,6 +3,18 @@ import db from '../../lib/db.js';
 import { AuthRequest } from '../../middleware/auth.middleware.js';
 import { v4 as uuidv4 } from "uuid";
 
+const resolveGroupId = async (id: string | string[]): Promise<string | null> => {
+  const raw = Array.isArray(id) ? id[0] : id;
+  const isNumeric = /^\d+$/.test(raw);
+  const result = await db.query(
+    isNumeric
+      ? 'SELECT id FROM groups WHERE "groupNumber" = $1'
+      : 'SELECT id FROM groups WHERE id = $1',
+    [isNumeric ? parseInt(raw, 10) : raw],
+  );
+  return result.rows.length > 0 ? result.rows[0].id : null;
+};
+
 /**
  * @route   POST /api/v1/groups
  * @desc    Create a new group
@@ -420,18 +432,16 @@ export const updateGroup = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    const groupId = await resolveGroupId(id);
+    if (!groupId) {
+      return res.status(404).json({ success: false, message: "Group not found" });
+    }
+
     // Check if user is the owner
     const groupResult = await db.query(
       'SELECT "ownerId" FROM groups WHERE id = $1',
-      [id],
+      [groupId],
     );
-
-    if (groupResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Group not found",
-      });
-    }
 
     if (groupResult.rows[0].ownerId !== userId) {
       return res.status(403).json({
@@ -450,7 +460,7 @@ export const updateGroup = async (req: AuthRequest, res: Response) => {
       // Check if new name already exists (excluding current group)
       const existingGroup = await db.query(
         "SELECT id FROM groups WHERE LOWER(name) = LOWER($1) AND id != $2",
-        [name, id],
+        [name, groupId],
       );
 
       if (existingGroup.rows.length > 0) {
@@ -497,7 +507,7 @@ export const updateGroup = async (req: AuthRequest, res: Response) => {
     }
 
     updates.push(`"updatedAt" = NOW()`);
-    values.push(id);
+    values.push(groupId);
 
     const updateResult = await db.query(
       `UPDATE groups SET ${updates.join(", ")} WHERE id = $${paramIndex}
@@ -549,18 +559,16 @@ export const deleteGroup = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    const groupId = await resolveGroupId(id);
+    if (!groupId) {
+      return res.status(404).json({ success: false, message: "Group not found" });
+    }
+
     // Check if user is the owner
     const groupResult = await db.query(
       'SELECT "ownerId" FROM groups WHERE id = $1',
-      [id],
+      [groupId],
     );
-
-    if (groupResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Group not found",
-      });
-    }
 
     if (groupResult.rows[0].ownerId !== userId) {
       return res.status(403).json({
@@ -570,10 +578,10 @@ export const deleteGroup = async (req: AuthRequest, res: Response) => {
     }
 
     // Delete all group members first (due to foreign key)
-    await db.query('DELETE FROM group_members WHERE "groupId" = $1', [id]);
+    await db.query('DELETE FROM group_members WHERE "groupId" = $1', [groupId]);
 
     // Delete the group
-    await db.query("DELETE FROM groups WHERE id = $1", [id]);
+    await db.query("DELETE FROM groups WHERE id = $1", [groupId]);
 
     return res.status(200).json({
       success: true,
@@ -809,13 +817,18 @@ export const getJoinRequests = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    const groupId = await resolveGroupId(id);
+    if (!groupId) {
+      return res.status(404).json({ success: false, message: "Group not found" });
+    }
+
     // Check if user has permission to manage members
     const memberResult = await db.query(
       `SELECT gm.id, gr.name, gr."canManageMembers"
        FROM group_members gm
        LEFT JOIN group_roles gr ON gm."roleId" = gr.id
        WHERE gm."groupId" = $1 AND gm."userId" = $2`,
-      [id, userId],
+      [groupId, userId],
     );
 
     if (memberResult.rows.length === 0) {
@@ -849,7 +862,7 @@ export const getJoinRequests = async (req: AuthRequest, res: Response) => {
       LEFT JOIN users u ON jr."userId" = u.id
       WHERE jr."groupId" = $1 AND jr.status = 'pending'
       ORDER BY jr."requestedAt" DESC`,
-      [id],
+      [groupId],
     );
 
     return res.status(200).json({
@@ -884,13 +897,18 @@ export const acceptJoinRequest = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    const groupId = await resolveGroupId(id);
+    if (!groupId) {
+      return res.status(404).json({ success: false, message: "Group not found" });
+    }
+
     // Check if user has permission to manage members
     const memberResult = await db.query(
       `SELECT gm.id, gr.name, gr."canManageMembers"
        FROM group_members gm
        LEFT JOIN group_roles gr ON gm."roleId" = gr.id
        WHERE gm."groupId" = $1 AND gm."userId" = $2`,
-      [id, userId],
+      [groupId, userId],
     );
 
     if (memberResult.rows.length === 0) {
@@ -911,7 +929,7 @@ export const acceptJoinRequest = async (req: AuthRequest, res: Response) => {
     // Get the join request
     const requestResult = await db.query(
       'SELECT "userId", status FROM group_join_requests WHERE id = $1 AND "groupId" = $2',
-      [requestId, id],
+      [requestId, groupId],
     );
 
     if (requestResult.rows.length === 0) {
@@ -932,7 +950,7 @@ export const acceptJoinRequest = async (req: AuthRequest, res: Response) => {
     // Get the default Member role
     const memberRoleResult = await db.query(
       'SELECT id FROM group_roles WHERE "groupId" = $1 AND name = $2',
-      [id, 'Member'],
+      [groupId, 'Member'],
     );
 
     const memberRoleId = memberRoleResult.rows.length > 0 
@@ -949,7 +967,7 @@ export const acceptJoinRequest = async (req: AuthRequest, res: Response) => {
         "roleId",
         "joinedAt"
       ) VALUES ($1, $2, $3, $4, NOW())`,
-      [newMemberId, id, request.userId, memberRoleId],
+      [newMemberId, groupId, request.userId, memberRoleId],
     );
 
     // Update join request status
@@ -963,7 +981,7 @@ export const acceptJoinRequest = async (req: AuthRequest, res: Response) => {
     // Update member count
     await db.query(
       'UPDATE groups SET "memberCount" = "memberCount" + 1 WHERE id = $1',
-      [id],
+      [groupId],
     );
 
     return res.status(200).json({
@@ -996,13 +1014,18 @@ export const rejectJoinRequest = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    const groupId = await resolveGroupId(id);
+    if (!groupId) {
+      return res.status(404).json({ success: false, message: "Group not found" });
+    }
+
     // Check if user has permission to manage members
     const memberResult = await db.query(
       `SELECT gm.id, gr.name, gr."canManageMembers"
        FROM group_members gm
        LEFT JOIN group_roles gr ON gm."roleId" = gr.id
        WHERE gm."groupId" = $1 AND gm."userId" = $2`,
-      [id, userId],
+      [groupId, userId],
     );
 
     if (memberResult.rows.length === 0) {
@@ -1023,7 +1046,7 @@ export const rejectJoinRequest = async (req: AuthRequest, res: Response) => {
     // Get the join request
     const requestResult = await db.query(
       'SELECT status FROM group_join_requests WHERE id = $1 AND "groupId" = $2',
-      [requestId, id],
+      [requestId, groupId],
     );
 
     if (requestResult.rows.length === 0) {
@@ -1155,6 +1178,11 @@ export const getGroupMembers = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
+    const groupId = await resolveGroupId(id);
+    if (!groupId) {
+      return res.status(404).json({ success: false, message: "Group not found" });
+    }
+
     const membersResult = await db.query(
       `SELECT
         gm.id,
@@ -1170,7 +1198,7 @@ export const getGroupMembers = async (req: Request, res: Response) => {
       LEFT JOIN group_roles gr ON gm."roleId" = gr.id
       WHERE gm."groupId" = $1
       ORDER BY gm."joinedAt" ASC`,
-      [id],
+      [groupId],
     );
 
     return res.status(200).json({
@@ -1300,6 +1328,11 @@ export const getGroupGames = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
+    const groupId = await resolveGroupId(id);
+    if (!groupId) {
+      return res.status(404).json({ success: false, message: "Group not found" });
+    }
+
     const gamesResult = await db.query(
       `SELECT
         g.id,
@@ -1315,7 +1348,7 @@ export const getGroupGames = async (req: Request, res: Response) => {
       FROM games g
       WHERE g."groupId" = $1 AND g."isPublished" = true
       ORDER BY g."createdAt" DESC`,
-      [id],
+      [groupId],
     );
 
     return res.status(200).json({
@@ -1346,6 +1379,11 @@ export const getGroupWallPosts = async (req: Request, res: Response) => {
     const limit = parseInt(req.query.limit as string) || 20;
     const offset = (page - 1) * limit;
 
+    const groupId = await resolveGroupId(id);
+    if (!groupId) {
+      return res.status(404).json({ success: false, message: "Group not found" });
+    }
+
     const postsResult = await db.query(
       `SELECT
         gwp.id,
@@ -1362,12 +1400,12 @@ export const getGroupWallPosts = async (req: Request, res: Response) => {
       WHERE gwp."groupId" = $1
       ORDER BY gwp."createdAt" DESC
       LIMIT $2 OFFSET $3`,
-      [id, limit, offset],
+      [groupId, limit, offset],
     );
 
     const countResult = await db.query(
       `SELECT COUNT(*) as total FROM group_wall_posts WHERE "groupId" = $1`,
-      [id],
+      [groupId],
     );
 
     const totalCount = parseInt(countResult.rows[0].total);
@@ -1420,10 +1458,15 @@ export const createGroupWallPost = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    const groupId = await resolveGroupId(id);
+    if (!groupId) {
+      return res.status(404).json({ success: false, message: "Group not found" });
+    }
+
     // Check if user is a member of the group
     const memberCheck = await db.query(
       `SELECT id FROM group_members WHERE "groupId" = $1 AND "userId" = $2`,
-      [id, userId],
+      [groupId, userId],
     );
 
     if (memberCheck.rows.length === 0) {
@@ -1437,7 +1480,7 @@ export const createGroupWallPost = async (req: AuthRequest, res: Response) => {
     await db.query(
       `INSERT INTO group_wall_posts (id, "groupId", "authorId", content, "createdAt", "updatedAt")
        VALUES ($1, $2, $3, $4, NOW(), NOW())`,
-      [postId, id, userId, content.trim()],
+      [postId, groupId, userId, content.trim()],
     );
 
     const postResult = await db.query(
@@ -1760,18 +1803,16 @@ export const leaveGroupEnhanced = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    const groupId = await resolveGroupId(id);
+    if (!groupId) {
+      return res.status(404).json({ success: false, message: "Group not found" });
+    }
+
     // Check if user is the owner and get member count
     const groupResult = await db.query(
       `SELECT "ownerId", "memberCount" FROM groups WHERE id = $1`,
-      [id],
+      [groupId],
     );
-
-    if (groupResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Group not found",
-      });
-    }
 
     const group = groupResult.rows[0];
     const isOwner = group.ownerId === userId;
@@ -1787,34 +1828,19 @@ export const leaveGroupEnhanced = async (req: AuthRequest, res: Response) => {
       }
 
       // Owner is last member - delete the entire group
-      // Clear primary group references
       await db.query(
         `UPDATE users SET primary_group_id = NULL WHERE primary_group_id = $1`,
-        [id],
+        [groupId],
       );
-
-      // Delete group wall posts
-      await db.query(`DELETE FROM group_wall_posts WHERE "groupId" = $1`, [id]);
-
-      // Delete group members
-      await db.query(`DELETE FROM group_members WHERE "groupId" = $1`, [id]);
-
-      // Delete group roles
-      await db.query(`DELETE FROM group_roles WHERE "groupId" = $1`, [id]);
-
-      // Delete group alliances
+      await db.query(`DELETE FROM group_wall_posts WHERE "groupId" = $1`, [groupId]);
+      await db.query(`DELETE FROM group_members WHERE "groupId" = $1`, [groupId]);
+      await db.query(`DELETE FROM group_roles WHERE "groupId" = $1`, [groupId]);
       await db.query(
         `DELETE FROM group_alliances WHERE "groupId" = $1 OR "alliedGroupId" = $1`,
-        [id],
+        [groupId],
       );
-
-      // Update games to remove group association
-      await db.query(`UPDATE games SET "groupId" = NULL WHERE "groupId" = $1`, [
-        id,
-      ]);
-
-      // Delete the group
-      await db.query(`DELETE FROM groups WHERE id = $1`, [id]);
+      await db.query(`UPDATE games SET "groupId" = NULL WHERE "groupId" = $1`, [groupId]);
+      await db.query(`DELETE FROM groups WHERE id = $1`, [groupId]);
 
       return res.status(200).json({
         success: true,
@@ -1823,10 +1849,9 @@ export const leaveGroupEnhanced = async (req: AuthRequest, res: Response) => {
     }
 
     // Regular member leaving
-    // Remove user from group
     const deleteResult = await db.query(
       `DELETE FROM group_members WHERE "groupId" = $1 AND "userId" = $2 RETURNING id`,
-      [id, userId],
+      [groupId, userId],
     );
 
     if (deleteResult.rows.length === 0) {
@@ -1836,16 +1861,14 @@ export const leaveGroupEnhanced = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Update member count
     await db.query(
       `UPDATE groups SET "memberCount" = "memberCount" - 1 WHERE id = $1`,
-      [id],
+      [groupId],
     );
 
-    // Clear primary group if it was this group
     await db.query(
       `UPDATE users SET primary_group_id = NULL WHERE id = $1 AND primary_group_id = $2`,
-      [userId, id],
+      [userId, groupId],
     );
 
     return res.status(200).json({
@@ -1878,18 +1901,16 @@ export const removeMember = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    const groupId = await resolveGroupId(id);
+    if (!groupId) {
+      return res.status(404).json({ success: false, message: "Group not found" });
+    }
+
     // Check if requester is the owner
     const groupResult = await db.query(
       `SELECT "ownerId" FROM groups WHERE id = $1`,
-      [id],
+      [groupId],
     );
-
-    if (groupResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Group not found",
-      });
-    }
 
     const group = groupResult.rows[0];
 
@@ -1900,7 +1921,6 @@ export const removeMember = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Cannot remove the owner
     if (userId === group.ownerId) {
       return res.status(403).json({
         success: false,
@@ -1908,10 +1928,9 @@ export const removeMember = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Remove member
     const deleteResult = await db.query(
       `DELETE FROM group_members WHERE "groupId" = $1 AND "userId" = $2 RETURNING id`,
-      [id, userId],
+      [groupId, userId],
     );
 
     if (deleteResult.rows.length === 0) {
@@ -1921,16 +1940,14 @@ export const removeMember = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Update member count
     await db.query(
       `UPDATE groups SET "memberCount" = "memberCount" - 1 WHERE id = $1`,
-      [id],
+      [groupId],
     );
 
-    // Clear primary group if it was this group
     await db.query(
       `UPDATE users SET primary_group_id = NULL WHERE id = $1 AND primary_group_id = $2`,
-      [userId, id],
+      [userId, groupId],
     );
 
     return res.status(200).json({
@@ -1964,18 +1981,16 @@ export const updateMemberRole = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    const groupId = await resolveGroupId(id);
+    if (!groupId) {
+      return res.status(404).json({ success: false, message: "Group not found" });
+    }
+
     // Check if requester is the owner
     const groupResult = await db.query(
       `SELECT "ownerId" FROM groups WHERE id = $1`,
-      [id],
+      [groupId],
     );
-
-    if (groupResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Group not found",
-      });
-    }
 
     const group = groupResult.rows[0];
 
@@ -1986,7 +2001,6 @@ export const updateMemberRole = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Cannot change owner's role
     if (userId === group.ownerId) {
       return res.status(403).json({
         success: false,
@@ -1994,11 +2008,10 @@ export const updateMemberRole = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Verify roleId exists for this group if provided
     if (roleId) {
       const roleCheck = await db.query(
         `SELECT id FROM group_roles WHERE id = $1 AND "groupId" = $2`,
-        [roleId, id],
+        [roleId, groupId],
       );
 
       if (roleCheck.rows.length === 0) {
@@ -2009,10 +2022,9 @@ export const updateMemberRole = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    // Update member role
     const updateResult = await db.query(
       `UPDATE group_members SET "roleId" = $1 WHERE "groupId" = $2 AND "userId" = $3 RETURNING id`,
-      [roleId || null, id, userId],
+      [roleId || null, groupId, userId],
     );
 
     if (updateResult.rows.length === 0) {
@@ -2060,16 +2072,9 @@ export const reportGroup = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if group exists
-    const groupCheck = await db.query(`SELECT id FROM groups WHERE id = $1`, [
-      id,
-    ]);
-
-    if (groupCheck.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Group not found",
-      });
+    const groupId = await resolveGroupId(id);
+    if (!groupId) {
+      return res.status(404).json({ success: false, message: "Group not found" });
     }
 
     // Create report
@@ -2119,18 +2124,16 @@ export const deleteGroupEnhanced = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    const groupId = await resolveGroupId(id);
+    if (!groupId) {
+      return res.status(404).json({ success: false, message: "Group not found" });
+    }
+
     // Check if user is the owner
     const groupResult = await db.query(
       `SELECT "ownerId", name FROM groups WHERE id = $1`,
-      [id],
+      [groupId],
     );
-
-    if (groupResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Group not found",
-      });
-    }
 
     const group = groupResult.rows[0];
 
@@ -2141,34 +2144,13 @@ export const deleteGroupEnhanced = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Clear primary group references
-    await db.query(
-      `UPDATE users SET primary_group_id = NULL WHERE primary_group_id = $1`,
-      [id],
-    );
-
-    // Delete group wall posts
-    await db.query(`DELETE FROM group_wall_posts WHERE "groupId" = $1`, [id]);
-
-    // Delete group members
-    await db.query(`DELETE FROM group_members WHERE "groupId" = $1`, [id]);
-
-    // Delete group roles
-    await db.query(`DELETE FROM group_roles WHERE "groupId" = $1`, [id]);
-
-    // Delete group alliances
-    await db.query(
-      `DELETE FROM group_alliances WHERE "groupId" = $1 OR "alliedGroupId" = $1`,
-      [id],
-    );
-
-    // Update games to remove group association
-    await db.query(`UPDATE games SET "groupId" = NULL WHERE "groupId" = $1`, [
-      id,
-    ]);
-
-    // Delete the group
-    await db.query(`DELETE FROM groups WHERE id = $1`, [id]);
+    await db.query(`UPDATE users SET primary_group_id = NULL WHERE primary_group_id = $1`, [groupId]);
+    await db.query(`DELETE FROM group_wall_posts WHERE "groupId" = $1`, [groupId]);
+    await db.query(`DELETE FROM group_members WHERE "groupId" = $1`, [groupId]);
+    await db.query(`DELETE FROM group_roles WHERE "groupId" = $1`, [groupId]);
+    await db.query(`DELETE FROM group_alliances WHERE "groupId" = $1 OR "alliedGroupId" = $1`, [groupId]);
+    await db.query(`UPDATE games SET "groupId" = NULL WHERE "groupId" = $1`, [groupId]);
+    await db.query(`DELETE FROM groups WHERE id = $1`, [groupId]);
 
     return res.status(200).json({
       success: true,
@@ -2192,6 +2174,11 @@ export const getGroupRoles = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
+    const groupId = await resolveGroupId(id);
+    if (!groupId) {
+      return res.status(404).json({ success: false, message: "Group not found" });
+    }
+
     const rolesResult = await db.query(
       `SELECT
         id,
@@ -2211,7 +2198,7 @@ export const getGroupRoles = async (req: Request, res: Response) => {
       FROM group_roles
       WHERE "groupId" = $1
       ORDER BY rank DESC`,
-      [id],
+      [groupId],
     );
 
     return res.status(200).json({
@@ -2266,18 +2253,16 @@ export const createGroupRole = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    const groupId = await resolveGroupId(id);
+    if (!groupId) {
+      return res.status(404).json({ success: false, message: "Group not found" });
+    }
+
     // Check if user is the owner
     const groupResult = await db.query(
       `SELECT "ownerId" FROM groups WHERE id = $1`,
-      [id],
+      [groupId],
     );
-
-    if (groupResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Group not found",
-      });
-    }
 
     const group = groupResult.rows[0];
 
@@ -2324,7 +2309,7 @@ export const createGroupRole = async (req: AuthRequest, res: Response) => {
         "canManageAlliances" as can_manage_alliances`,
       [
         roleId,
-        id,
+        groupId,
         name,
         rank || 0,
         canManageMembers || false,
@@ -2384,18 +2369,16 @@ export const updateGroupRole = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    const groupId = await resolveGroupId(id);
+    if (!groupId) {
+      return res.status(404).json({ success: false, message: "Group not found" });
+    }
+
     // Check if user is the owner
     const groupResult = await db.query(
       `SELECT "ownerId" FROM groups WHERE id = $1`,
-      [id],
+      [groupId],
     );
-
-    if (groupResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Group not found",
-      });
-    }
 
     const group = groupResult.rows[0];
 
@@ -2464,7 +2447,7 @@ export const updateGroupRole = async (req: AuthRequest, res: Response) => {
     }
 
     updates.push(`"updatedAt" = NOW()`);
-    values.push(roleId, id);
+    values.push(roleId, groupId);
 
     const updateResult = await db.query(
       `UPDATE group_roles SET ${updates.join(", ")}
@@ -2524,18 +2507,16 @@ export const updateGroupShout = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    const groupId = await resolveGroupId(id);
+    if (!groupId) {
+      return res.status(404).json({ success: false, message: "Group not found" });
+    }
+
     // Check if user is the owner
     const groupResult = await db.query(
       'SELECT "ownerId" FROM groups WHERE id = $1',
-      [id],
+      [groupId],
     );
-
-    if (groupResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Group not found",
-      });
-    }
 
     if (groupResult.rows[0].ownerId !== userId) {
       return res.status(403).json({
@@ -2544,7 +2525,6 @@ export const updateGroupShout = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Update shout
     const updateResult = await db.query(
       `UPDATE groups 
        SET "shoutText" = $1, 
@@ -2556,7 +2536,7 @@ export const updateGroupShout = async (req: AuthRequest, res: Response) => {
          "shoutText" as shout_text,
          "shoutPostedAt" as shout_posted_at,
          "shoutPostedBy" as shout_posted_by`,
-      [shoutText || null, userId, id],
+      [shoutText || null, userId, groupId],
     );
 
     return res.status(200).json({
@@ -2592,18 +2572,16 @@ export const deleteGroupRole = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    const groupId = await resolveGroupId(id);
+    if (!groupId) {
+      return res.status(404).json({ success: false, message: "Group not found" });
+    }
+
     // Check if user is the owner
     const groupResult = await db.query(
       `SELECT "ownerId" FROM groups WHERE id = $1`,
-      [id],
+      [groupId],
     );
-
-    if (groupResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Group not found",
-      });
-    }
 
     const group = groupResult.rows[0];
 
@@ -2614,16 +2592,14 @@ export const deleteGroupRole = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Set roleId to null for members with this role
     await db.query(
       `UPDATE group_members SET "roleId" = NULL WHERE "roleId" = $1 AND "groupId" = $2`,
-      [roleId, id],
+      [roleId, groupId],
     );
 
-    // Delete role
     const deleteResult = await db.query(
       `DELETE FROM group_roles WHERE id = $1 AND "groupId" = $2 RETURNING id`,
-      [roleId, id],
+      [roleId, groupId],
     );
 
     if (deleteResult.rows.length === 0) {

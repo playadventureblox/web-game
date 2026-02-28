@@ -1695,10 +1695,26 @@ export const makePrimaryGroup = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Resolve groupNumber or UUID
+    const rawId = Array.isArray(id) ? id[0] : id;
+    const isNumeric = /^\d+$/.test(rawId);
+    const groupLookup = await db.query(
+      isNumeric
+        ? 'SELECT id FROM groups WHERE "groupNumber" = $1'
+        : 'SELECT id FROM groups WHERE id = $1',
+      [isNumeric ? parseInt(rawId, 10) : rawId],
+    );
+
+    if (groupLookup.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Group not found" });
+    }
+
+    const groupId = groupLookup.rows[0].id;
+
     // Check if user is a member of the group
     const memberCheck = await db.query(
       `SELECT id FROM group_members WHERE "groupId" = $1 AND "userId" = $2`,
-      [id, userId],
+      [groupId, userId],
     );
 
     if (memberCheck.rows.length === 0) {
@@ -1710,7 +1726,7 @@ export const makePrimaryGroup = async (req: AuthRequest, res: Response) => {
 
     // Update user's primary group
     await db.query(`UPDATE users SET primary_group_id = $1 WHERE id = $2`, [
-      id,
+      groupId,
       userId,
     ]);
 

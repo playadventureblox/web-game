@@ -607,12 +607,13 @@ export const joinGroup = async (req: AuthRequest, res: Response) => {
     }
 
     // Resolve groupNumber or UUID to actual group UUID
-    const isNumeric = /^\d+$/.test(id);
+    const rawId = Array.isArray(id) ? id[0] : id;
+    const isNumeric = /^\d+$/.test(rawId);
     const groupLookup = await db.query(
       isNumeric
         ? 'SELECT id, "joinSetting", "memberCount" FROM groups WHERE "groupNumber" = $1'
         : 'SELECT id, "joinSetting", "memberCount" FROM groups WHERE id = $1',
-      [isNumeric ? parseInt(id, 10) : id],
+      [isNumeric ? parseInt(rawId, 10) : rawId],
     );
 
     // Use groupResult alias for the rest of the function
@@ -1079,12 +1080,13 @@ export const leaveGroup = async (req: AuthRequest, res: Response) => {
     }
 
     // Resolve groupNumber or UUID
-    const isNumeric = /^\d+$/.test(id);
+    const rawId = Array.isArray(id) ? id[0] : id;
+    const isNumeric = /^\d+$/.test(rawId);
     const groupLookup = await db.query(
       isNumeric
         ? 'SELECT id, "ownerId" FROM groups WHERE "groupNumber" = $1'
         : 'SELECT id, "ownerId" FROM groups WHERE id = $1',
-      [isNumeric ? parseInt(id, 10) : id],
+      [isNumeric ? parseInt(rawId, 10) : rawId],
     );
 
     if (groupLookup.rows.length === 0) {

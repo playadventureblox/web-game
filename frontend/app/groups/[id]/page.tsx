@@ -235,11 +235,13 @@ const GroupDetailPage = () => {
 
   // Handle join group
   const handleJoinGroup = async () => {
-    if (!groupId) return;
+    // Use the UUID from loaded group details — groupId in URL is groupNumber
+    const groupUuid = currentGroupDetails?.id;
+    if (!groupUuid) return;
 
     setJoining(true);
     try {
-      const response = await groupsApi.joinGroup(groupId);
+      const response = await groupsApi.joinGroup(groupUuid);
       if (response.success) {
         const requiresApproval = (response as any).requiresApproval;
         

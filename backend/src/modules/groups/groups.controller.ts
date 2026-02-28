@@ -606,11 +606,17 @@ export const joinGroup = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if group exists
-    const groupResult = await db.query(
-      'SELECT "joinSetting", "memberCount" FROM groups WHERE id = $1',
-      [id],
+    // Resolve groupNumber or UUID to actual group UUID
+    const isNumeric = /^\d+$/.test(id);
+    const groupLookup = await db.query(
+      isNumeric
+        ? 'SELECT id, "joinSetting", "memberCount" FROM groups WHERE "groupNumber" = $1'
+        : 'SELECT id, "joinSetting", "memberCount" FROM groups WHERE id = $1',
+      [isNumeric ? parseInt(id, 10) : id],
     );
+
+    // Use groupResult alias for the rest of the function
+    const groupResult = groupLookup;
 
     if (groupResult.rows.length === 0) {
       return res.status(404).json({
@@ -619,10 +625,13 @@ export const joinGroup = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Always use the real UUID for all subsequent queries
+    const groupId = groupResult.rows[0].id;
+
     // Check if user is already a member
     const memberResult = await db.query(
       'SELECT id FROM group_members WHERE "groupId" = $1 AND "userId" = $2',
-      [id, userId],
+      [groupId, userId],
     );
 
     if (memberResult.rows.length > 0) {
@@ -635,7 +644,7 @@ export const joinGroup = async (req: AuthRequest, res: Response) => {
     // Check if user has a pending join request
     const existingRequestResult = await db.query(
       'SELECT id, status FROM group_join_requests WHERE "groupId" = $1 AND "userId" = $2',
-      [id, userId],
+      [groupId, userId],
     );
 
     if (existingRequestResult.rows.length > 0) {
@@ -646,16 +655,14 @@ export const joinGroup = async (req: AuthRequest, res: Response) => {
           message: "You already have a pending join request for this group",
         });
       } else if (request.status === 'rejected') {
-        // Allow user to request again, but delete the old rejected request first
         await db.query(
           'DELETE FROM group_join_requests WHERE "groupId" = $1 AND "userId" = $2',
-          [id, userId],
+          [groupId, userId],
         );
       } else if (request.status === 'approved') {
-        // Delete old approved request (user was kicked/left and is rejoining)
         await db.query(
           'DELETE FROM group_join_requests WHERE "groupId" = $1 AND "userId" = $2',
-          [id, userId],
+          [groupId, userId],
         );
       }
     }
@@ -663,20 +670,19 @@ export const joinGroup = async (req: AuthRequest, res: Response) => {
     // Get group settings to check join requirements
     let settingsResult = await db.query(
       'SELECT "manualApproval", "accountAgeRequirement" FROM group_settings WHERE "groupId" = $1',
-      [id],
+      [groupId],
     );
 
     // If settings don't exist, create default settings
     if (settingsResult.rows.length === 0) {
-      console.log('No settings found for group, creating defaults');
       await db.query(
         `INSERT INTO group_settings ("groupId", "manualApproval", "accountAgeRequirement") 
          VALUES ($1, false, 'none')`,
-        [id],
+        [groupId],
       );
       settingsResult = await db.query(
         'SELECT "manualApproval", "accountAgeRequirement" FROM group_settings WHERE "groupId" = $1',
-        [id],
+        [groupId],
       );
     }
 
@@ -725,7 +731,7 @@ export const joinGroup = async (req: AuthRequest, res: Response) => {
           status,
           "requestedAt"
         ) VALUES ($1, $2, $3, 'pending', NOW())`,
-        [requestId, id, userId],
+        [requestId, groupId, userId],
       );
 
       return res.status(200).json({
@@ -738,7 +744,7 @@ export const joinGroup = async (req: AuthRequest, res: Response) => {
     // Get the default Member role for this group
     const memberRoleResult = await db.query(
       'SELECT id FROM group_roles WHERE "groupId" = $1 AND name = $2',
-      [id, 'Member'],
+      [groupId, 'Member'],
     );
 
     const memberRoleId = memberRoleResult.rows.length > 0 
@@ -755,13 +761,13 @@ export const joinGroup = async (req: AuthRequest, res: Response) => {
         "roleId",
         "joinedAt"
       ) VALUES ($1, $2, $3, $4, NOW())`,
-      [memberId, id, userId, memberRoleId],
+      [memberId, groupId, userId, memberRoleId],
     );
 
     // Update member count
     await db.query(
       'UPDATE groups SET "memberCount" = "memberCount" + 1 WHERE id = $1',
-      [id],
+      [groupId],
     );
 
     return res.status(200).json({
@@ -1072,21 +1078,26 @@ export const leaveGroup = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if group exists and if user is owner
-    const groupResult = await db.query(
-      'SELECT "ownerId" FROM groups WHERE id = $1',
-      [id],
+    // Resolve groupNumber or UUID
+    const isNumeric = /^\d+$/.test(id);
+    const groupLookup = await db.query(
+      isNumeric
+        ? 'SELECT id, "ownerId" FROM groups WHERE "groupNumber" = $1'
+        : 'SELECT id, "ownerId" FROM groups WHERE id = $1',
+      [isNumeric ? parseInt(id, 10) : id],
     );
 
-    if (groupResult.rows.length === 0) {
+    if (groupLookup.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: "Group not found",
       });
     }
 
+    const groupId = groupLookup.rows[0].id;
+
     // Check if user is the owner
-    if (groupResult.rows[0].ownerId === userId) {
+    if (groupLookup.rows[0].ownerId === userId) {
       return res.status(403).json({
         success: false,
         message:
@@ -1097,7 +1108,7 @@ export const leaveGroup = async (req: AuthRequest, res: Response) => {
     // Check if user is a member
     const memberResult = await db.query(
       'SELECT id FROM group_members WHERE "groupId" = $1 AND "userId" = $2',
-      [id, userId],
+      [groupId, userId],
     );
 
     if (memberResult.rows.length === 0) {
@@ -1110,13 +1121,13 @@ export const leaveGroup = async (req: AuthRequest, res: Response) => {
     // Remove user from group
     await db.query(
       'DELETE FROM group_members WHERE "groupId" = $1 AND "userId" = $2',
-      [id, userId],
+      [groupId, userId],
     );
 
     // Update member count
     await db.query(
       'UPDATE groups SET "memberCount" = "memberCount" - 1 WHERE id = $1',
-      [id],
+      [groupId],
     );
 
     return res.status(200).json({

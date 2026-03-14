@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { MoreHorizontal, Loader2 } from "lucide-react";
+import { MoreHorizontal, Loader2, ImagePlus, X } from "lucide-react";
 import Footer from "../../components/Footer";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
@@ -15,7 +15,7 @@ import DescriptionSection from "../../components/groups/DescriptionSection";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import ReportModal from "@/components/modals/ReportModal";
 import SuccessModal from "@/components/modals/SuccessModal";
-import { groupsApi, storage } from "@/lib/api";
+import { groupsApi, uploadApi, storage } from "@/lib/api";
 
 interface Group {
   id: string;
@@ -80,6 +80,7 @@ const GroupDetailPage = () => {
     Array<{
       id: string;
       content: string;
+      image_url?: string;
       likes: number;
       reply_count: number;
       created_at: string;
@@ -91,6 +92,9 @@ const GroupDetailPage = () => {
   >([]);
   const [loadingWallPosts, setLoadingWallPosts] = useState(true);
   const [postingWall, setPostingWall] = useState(false);
+  const [postImage, setPostImage] = useState<File | null>(null);
+  const [postImagePreview, setPostImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [showReplies, setShowReplies] = useState<Record<string, boolean>>({});
   const [replies, setReplies] = useState<Record<string, any[]>>({});
   const [loadingReplies, setLoadingReplies] = useState<Record<string, boolean>>({});
@@ -216,29 +220,65 @@ const GroupDetailPage = () => {
     fetchWallPosts();
   }, [groupId]);
 
+  // Handle image selection for wall post
+  const handlePostImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image must be under 5MB");
+      return;
+    }
+    setPostImage(file);
+    setPostImagePreview(URL.createObjectURL(file));
+  };
+
+  const handleRemovePostImage = () => {
+    setPostImage(null);
+    if (postImagePreview) URL.revokeObjectURL(postImagePreview);
+    setPostImagePreview(null);
+  };
+
   // Handle wall post submission
   const handlePostSubmit = async () => {
-    if (!groupId || !newPost.trim()) return;
+    if (!groupId || (!newPost.trim() && !postImage)) return;
 
     setPostingWall(true);
     try {
+      let imageUrl: string | undefined;
+
+      // Upload image first if present
+      if (postImage) {
+        setUploadingImage(true);
+        const uploadResponse = await uploadApi.uploadImage(postImage, 'wall-post');
+        setUploadingImage(false);
+        if (uploadResponse.success && uploadResponse.data) {
+          imageUrl = (uploadResponse.data as { url: string }).url;
+        } else {
+          alert("Failed to upload image. Please try again.");
+          setPostingWall(false);
+          return;
+        }
+      }
+
       const response = await groupsApi.createGroupWallPost(
         groupId,
         newPost.trim(),
+        imageUrl,
       );
       if (response.success && response.data) {
-        // Add new post to the beginning of the list
         setWallPosts([
           response.data.post as (typeof wallPosts)[0],
           ...wallPosts,
         ]);
         setNewPost("");
+        handleRemovePostImage();
       }
     } catch (error) {
       console.error("Error posting to wall:", error);
       alert("Failed to post. Please try again.");
     } finally {
       setPostingWall(false);
+      setUploadingImage(false);
     }
   };
 
@@ -703,12 +743,12 @@ const GroupDetailPage = () => {
                     </div>
                     {currentGroup.role && (
                       <div>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 uppercase">
+                        <p className="text-xs text-gray-600 dark:text-gray-400 uppercase mb-1">
                           Rank
                         </p>
-                        <p className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                        <span className="inline-block px-4 py-1.5 text-sm font-bold rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700">
                           {currentGroup.role}
-                        </p>
+                        </span>
                       </div>
                     )}
                   </div>
@@ -943,7 +983,7 @@ const GroupDetailPage = () => {
                         {/* Username */}
                         {currentGroup.shout_posted_by_username && (
                           <a 
-                            href={`/users/${currentGroup.shout_posted_by_username}`}
+                            href={`/profile/${currentGroup.shout_posted_by_username}`}
                             className="font-semibold text-sm text-gray-900 dark:text-gray-100 hover:underline"
                           >
                             {currentGroup.shout_posted_by_username}
@@ -1024,21 +1064,45 @@ const GroupDetailPage = () => {
                   Wall
                 </h2>
 
-                <div className="flex gap-2 mb-4">
-                  <textarea
-                    value={newPost}
-                    onChange={(e) => setNewPost(e.target.value)}
-                    placeholder="Say something..."
-                    rows={2}
-                    className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                  />
-                  <button
-                    onClick={handlePostSubmit}
-                    disabled={!newPost.trim() || postingWall}
-                    className="px-4 py-2 h-fit bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {postingWall ? "Posting..." : "Post"}
-                  </button>
+                <div className="mb-4">
+                  <div className="flex gap-2">
+                    <textarea
+                      value={newPost}
+                      onChange={(e) => setNewPost(e.target.value)}
+                      placeholder="Say something..."
+                      rows={2}
+                      className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    />
+                    <div className="flex flex-col gap-1">
+                      <label className="p-2 h-fit hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer transition-colors" title="Attach image">
+                        <ImagePlus className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePostImageSelect}
+                          className="hidden"
+                        />
+                      </label>
+                      <button
+                        onClick={handlePostSubmit}
+                        disabled={(!newPost.trim() && !postImage) || postingWall}
+                        className="px-4 py-2 h-fit bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {uploadingImage ? "Uploading..." : postingWall ? "Posting..." : "Post"}
+                      </button>
+                    </div>
+                  </div>
+                  {postImagePreview && (
+                    <div className="mt-2 relative inline-block">
+                      <img src={postImagePreview} alt="Preview" className="max-h-32 rounded border border-gray-300 dark:border-gray-600" />
+                      <button
+                        onClick={handleRemovePostImage}
+                        className="absolute -top-2 -right-2 p-0.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {wallPosts.length > 0 ? (
@@ -1117,9 +1181,22 @@ const GroupDetailPage = () => {
                         </div>
 
                         {/* Post Content */}
-                        <p className="text-sm text-gray-900 dark:text-gray-100 mb-3 whitespace-pre-wrap break-words">
-                          {post.content}
-                        </p>
+                        {post.content && (
+                          <p className="text-sm text-gray-900 dark:text-gray-100 mb-3 whitespace-pre-wrap break-words">
+                            {post.content}
+                          </p>
+                        )}
+
+                        {/* Post Image */}
+                        {post.image_url && (
+                          <div className="mb-3 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                            <img
+                              src={post.image_url}
+                              alt="Post image"
+                              className="max-w-full max-h-96 object-contain"
+                            />
+                          </div>
+                        )}
 
                         {/* Post Actions */}
                         <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">

@@ -101,6 +101,15 @@ const ConfigureGroupPage = () => {
   const [instagram, setInstagram] = useState("");
   const [tiktok, setTiktok] = useState("");
   const [website, setWebsite] = useState("");
+  // Social Links title states
+  const [discordTitle, setDiscordTitle] = useState("");
+  const [twitterTitle, setTwitterTitle] = useState("");
+  const [youtubeTitle, setYoutubeTitle] = useState("");
+  const [twitchTitle, setTwitchTitle] = useState("");
+  const [facebookTitle, setFacebookTitle] = useState("");
+  const [instagramTitle, setInstagramTitle] = useState("");
+  const [tiktokTitle, setTiktokTitle] = useState("");
+  const [websiteTitle, setWebsiteTitle] = useState("");
 
   // Members states
   const [membersTab, setMembersTab] = useState<"members" | "requests">("members");
@@ -272,6 +281,14 @@ const ConfigureGroupPage = () => {
             setInstagram(links.instagram || "");
             setTiktok(links.tiktok || "");
             setWebsite(links.website || "");
+            setDiscordTitle(links.discord_title || "");
+            setTwitterTitle(links.twitter_title || "");
+            setYoutubeTitle(links.youtube_title || "");
+            setTwitchTitle(links.twitch_title || "");
+            setFacebookTitle(links.facebook_title || "");
+            setInstagramTitle(links.instagram_title || "");
+            setTiktokTitle(links.tiktok_title || "");
+            setWebsiteTitle(links.website_title || "");
           }
 
           // Fetch members
@@ -888,6 +905,14 @@ const ConfigureGroupPage = () => {
         instagram,
         tiktok,
         website,
+        discord_title: discordTitle,
+        twitter_title: twitterTitle,
+        youtube_title: youtubeTitle,
+        twitch_title: twitchTitle,
+        facebook_title: facebookTitle,
+        instagram_title: instagramTitle,
+        tiktok_title: tiktokTitle,
+        website_title: websiteTitle,
       });
 
       if (response.success) {
@@ -1508,104 +1533,176 @@ const ConfigureGroupPage = () => {
                       <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                         Discord
                       </label>
-                      <input
-                        type="text"
-                        value={discord}
-                        onChange={(e) => setDiscord(e.target.value)}
-                        placeholder="https://discord.gg/..."
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                      />
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={discord}
+                          onChange={(e) => setDiscord(e.target.value)}
+                          placeholder="https://discord.gg/..."
+                          className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                        <input
+                          type="text"
+                          value={discordTitle}
+                          onChange={(e) => setDiscordTitle(e.target.value)}
+                          placeholder="Title (optional)"
+                          className="w-40 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                         Twitter
                       </label>
-                      <input
-                        type="text"
-                        value={twitter}
-                        onChange={(e) => setTwitter(e.target.value)}
-                        placeholder="https://twitter.com/..."
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                      />
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={twitter}
+                          onChange={(e) => setTwitter(e.target.value)}
+                          placeholder="https://twitter.com/..."
+                          className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                        <input
+                          type="text"
+                          value={twitterTitle}
+                          onChange={(e) => setTwitterTitle(e.target.value)}
+                          placeholder="Title (optional)"
+                          className="w-40 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                         YouTube
                       </label>
-                      <input
-                        type="text"
-                        value={youtube}
-                        onChange={(e) => setYoutube(e.target.value)}
-                        placeholder="https://youtube.com/..."
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                      />
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={youtube}
+                          onChange={(e) => setYoutube(e.target.value)}
+                          placeholder="https://youtube.com/..."
+                          className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                        <input
+                          type="text"
+                          value={youtubeTitle}
+                          onChange={(e) => setYoutubeTitle(e.target.value)}
+                          placeholder="Title (optional)"
+                          className="w-40 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                         Twitch
                       </label>
-                      <input
-                        type="text"
-                        value={twitch}
-                        onChange={(e) => setTwitch(e.target.value)}
-                        placeholder="https://twitch.tv/..."
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                      />
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={twitch}
+                          onChange={(e) => setTwitch(e.target.value)}
+                          placeholder="https://twitch.tv/..."
+                          className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                        <input
+                          type="text"
+                          value={twitchTitle}
+                          onChange={(e) => setTwitchTitle(e.target.value)}
+                          placeholder="Title (optional)"
+                          className="w-40 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                         Facebook
                       </label>
-                      <input
-                        type="text"
-                        value={facebook}
-                        onChange={(e) => setFacebook(e.target.value)}
-                        placeholder="https://facebook.com/..."
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                      />
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={facebook}
+                          onChange={(e) => setFacebook(e.target.value)}
+                          placeholder="https://facebook.com/..."
+                          className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                        <input
+                          type="text"
+                          value={facebookTitle}
+                          onChange={(e) => setFacebookTitle(e.target.value)}
+                          placeholder="Title (optional)"
+                          className="w-40 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                         Instagram
                       </label>
-                      <input
-                        type="text"
-                        value={instagram}
-                        onChange={(e) => setInstagram(e.target.value)}
-                        placeholder="https://instagram.com/..."
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                      />
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={instagram}
+                          onChange={(e) => setInstagram(e.target.value)}
+                          placeholder="https://instagram.com/..."
+                          className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                        <input
+                          type="text"
+                          value={instagramTitle}
+                          onChange={(e) => setInstagramTitle(e.target.value)}
+                          placeholder="Title (optional)"
+                          className="w-40 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                         TikTok
                       </label>
-                      <input
-                        type="text"
-                        value={tiktok}
-                        onChange={(e) => setTiktok(e.target.value)}
-                        placeholder="https://tiktok.com/@..."
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                      />
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={tiktok}
+                          onChange={(e) => setTiktok(e.target.value)}
+                          placeholder="https://tiktok.com/@..."
+                          className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                        <input
+                          type="text"
+                          value={tiktokTitle}
+                          onChange={(e) => setTiktokTitle(e.target.value)}
+                          placeholder="Title (optional)"
+                          className="w-40 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                         Website
                       </label>
-                      <input
-                        type="text"
-                        value={website}
-                        onChange={(e) => setWebsite(e.target.value)}
-                        placeholder="https://yourwebsite.com"
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                      />
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={website}
+                          onChange={(e) => setWebsite(e.target.value)}
+                          placeholder="https://yourwebsite.com"
+                          className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                        <input
+                          type="text"
+                          value={websiteTitle}
+                          onChange={(e) => setWebsiteTitle(e.target.value)}
+                          placeholder="Title (optional)"
+                          className="w-40 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
                     </div>
 
                     <button

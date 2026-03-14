@@ -122,6 +122,99 @@ export const searchUsers = async (req: Request, res: Response) => {
  * @desc    Quick search for autocomplete (users only for now)
  * @access  Public
  */
+/**
+ * @route   GET /api/v1/search/groups
+ * @desc    Search groups by name
+ * @access  Public
+ */
+export const searchGroupsGlobal = async (req: Request, res: Response) => {
+  try {
+    const { q, limit = "8" } = req.query;
+
+    if (!q || typeof q !== "string" || q.trim().length < 2) {
+      return res.status(200).json({
+        success: true,
+        data: { groups: [] },
+      });
+    }
+
+    const searchLimit = Math.min(parseInt(limit as string) || 8, 20);
+    const result = await db.query(
+      `SELECT
+        id,
+        name,
+        description,
+        "iconUrl" as icon_url,
+        "memberCount" as member_count,
+        "isVerified" as is_verified
+      FROM groups
+      WHERE LOWER(name) LIKE LOWER($1)
+      ORDER BY "memberCount" DESC, name ASC
+      LIMIT $2`,
+      [`%${q.trim()}%`, searchLimit],
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: { groups: result.rows },
+    });
+  } catch (error) {
+    console.error("Search groups error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+/**
+ * @route   GET /api/v1/search/games
+ * @desc    Search games by title
+ * @access  Public
+ */
+export const searchGames = async (req: Request, res: Response) => {
+  try {
+    const { q, limit = "8" } = req.query;
+
+    if (!q || typeof q !== "string" || q.trim().length < 2) {
+      return res.status(200).json({
+        success: true,
+        data: { games: [] },
+      });
+    }
+
+    const searchLimit = Math.min(parseInt(limit as string) || 8, 20);
+    const result = await db.query(
+      `SELECT
+        g.id,
+        g.title,
+        g.description,
+        g."thumbnailUrl" as thumbnail_url,
+        g."iconUrl" as icon_url,
+        g.visits,
+        g.likes,
+        g."currentPlayers" as current_players
+      FROM games g
+      WHERE g."isPublished" = true
+        AND LOWER(g.title) LIKE LOWER($1)
+      ORDER BY g.visits DESC, g.title ASC
+      LIMIT $2`,
+      [`%${q.trim()}%`, searchLimit],
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: { games: result.rows },
+    });
+  } catch (error) {
+    console.error("Search games error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 export const quickSearch = async (req: Request, res: Response) => {
   try {
     const { q } = req.query;

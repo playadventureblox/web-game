@@ -27,6 +27,7 @@ import {
   getJoinRequests,
   acceptJoinRequest,
   rejectJoinRequest,
+  getMyGroupFeed,
 } from './groups.controller.js';
 import {
   getGroupSettings,
@@ -51,6 +52,7 @@ const router = Router();
 // Public routes
 router.get("/", getAllGroups);
 router.get("/search", searchGroups);
+router.get("/feed/me", authMiddleware, getMyGroupFeed);
 router.get("/:id", optionalAuth, getGroupById);
 router.get("/:id/members", getGroupMembers);
 router.get("/:id/games", getGroupGames);

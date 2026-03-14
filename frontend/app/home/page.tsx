@@ -3,13 +3,13 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronRight, Plus, Share2 } from "lucide-react";
+import { ChevronRight, Plus, Loader2, ImagePlus, X } from "lucide-react";
 import Footer from "../components/Footer";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import ProtectedRoute from "../components/ProtectedRoute";
 import VerifiedBadge from "../components/VerifiedBadge";
-import { usersApi, friendsApi } from "@/lib/api";
+import { usersApi, friendsApi, groupsApi, uploadApi } from "@/lib/api";
 import { useRealtime } from "@/contexts/RealtimeContext";
 
 const HomePage = () => {
@@ -19,15 +19,25 @@ const HomePage = () => {
   const [showRightAd, setShowRightAd] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [friends, setFriends] = useState<any[]>([]);
+  const [feedPosts, setFeedPosts] = useState<any[]>([]);
+  const [loadingFeed, setLoadingFeed] = useState(true);
+  const [feedPostText, setFeedPostText] = useState("");
+  const [feedPostImage, setFeedPostImage] = useState<File | null>(null);
+  const [feedPostImagePreview, setFeedPostImagePreview] = useState<string | null>(null);
+  const [postingFeed, setPostingFeed] = useState(false);
+  const [userGroupsList, setUserGroupsList] = useState<any[]>([]);
+  const [selectedFeedGroup, setSelectedFeedGroup] = useState<string>("");
   const { presenceMap } = useRealtime();
 
-  // Fetch user data and friends
+  // Fetch user data, friends, and feed
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [userResponse, friendsResponse] = await Promise.all([
+        const [userResponse, friendsResponse, feedResponse, groupsResponse] = await Promise.all([
           usersApi.getCurrentUser(),
-          friendsApi.getFriends()
+          friendsApi.getFriends(),
+          groupsApi.getMyGroupFeed(20, 0),
+          groupsApi.getUserGroups(),
         ]);
         
         if (userResponse.success && userResponse.data) {
@@ -43,12 +53,68 @@ const HomePage = () => {
           }));
           setFriends(realFriends);
         }
+
+        if (feedResponse.success && feedResponse.data) {
+          setFeedPosts((feedResponse.data as any).posts || []);
+        }
+
+        if (groupsResponse.success && groupsResponse.data) {
+          setUserGroupsList((groupsResponse.data.groups as any[]) || []);
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
+      } finally {
+        setLoadingFeed(false);
       }
     };
     fetchData();
   }, []);
+
+  // Feed image handling
+  const handleFeedImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { alert("Image must be under 5MB"); return; }
+    setFeedPostImage(file);
+    setFeedPostImagePreview(URL.createObjectURL(file));
+  };
+  const handleRemoveFeedImage = () => {
+    setFeedPostImage(null);
+    if (feedPostImagePreview) URL.revokeObjectURL(feedPostImagePreview);
+    setFeedPostImagePreview(null);
+  };
+
+  // Post to feed (wall of a selected group)
+  const handleFeedPost = async () => {
+    if (!selectedFeedGroup || (!feedPostText.trim() && !feedPostImage)) return;
+    setPostingFeed(true);
+    try {
+      let imageUrl: string | undefined;
+      if (feedPostImage) {
+        const uploadResponse = await uploadApi.uploadImage(feedPostImage, 'wall-post');
+        if (uploadResponse.success && uploadResponse.data) {
+          imageUrl = (uploadResponse.data as { url: string }).url;
+        } else {
+          alert("Failed to upload image."); setPostingFeed(false); return;
+        }
+      }
+      const response = await groupsApi.createGroupWallPost(selectedFeedGroup, feedPostText.trim(), imageUrl);
+      if (response.success) {
+        // Refresh feed
+        const feedResponse = await groupsApi.getMyGroupFeed(20, 0);
+        if (feedResponse.success && feedResponse.data) {
+          setFeedPosts((feedResponse.data as any).posts || []);
+        }
+        setFeedPostText("");
+        handleRemoveFeedImage();
+      }
+    } catch (error) {
+      console.error("Error posting to feed:", error);
+      alert("Failed to post. Please try again.");
+    } finally {
+      setPostingFeed(false);
+    }
+  };
 
   // Placeholder game data
   const games = [
@@ -60,30 +126,6 @@ const HomePage = () => {
     { id: 6, title: "Fantasy World", rating: "83% Rating" },
     { id: 7, title: "Zombie Survival", rating: "55% Rating" },
     { id: 8, title: "Parkour Master", rating: "56% Rating" },
-  ];
-
-
-  // Mock feed data
-  const feedPosts = [
-    {
-      id: 1,
-      type: "url",
-      url: "youtube.com/isotoxic",
-      group: "isoToxic Fan Group",
-      groupIcon: "https://robohash.org/isotoxic?set=set3",
-      content: "*qotd* should i quit yt or",
-      author: "SubToiSoToxic",
-      timestamp: "Jan 21, 2018 | 3:25 PM",
-    },
-    {
-      id: 2,
-      type: "post",
-      group: "ProjectSupreme",
-      groupIcon: "https://robohash.org/supreme?set=set3",
-      content: "New update coming soon!",
-      author: "DevTeam",
-      timestamp: "Jan 20, 2018 | 2:15 PM",
-    },
   ];
 
 
@@ -448,74 +490,137 @@ const HomePage = () => {
 
             {/* My Feed Section */}
             <section className="mb-12">
-              <div>
-                {/* My Feed */}
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
-                    My Feed
-                  </h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
+                My Feed
+              </h2>
 
-                  {/* URL Share Input */}
-                  <div className="mb-6 flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="youtube.com/isotoxic"
-                      className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <button className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg transition-colors">
-                      Share
-                    </button>
+              {/* Post Composer */}
+              {userGroupsList.length > 0 && (
+                <div className="mb-6 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <select
+                      value={selectedFeedGroup}
+                      onChange={(e) => setSelectedFeedGroup(e.target.value)}
+                      className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Post to group...</option>
+                      {userGroupsList.map((g: any) => (
+                        <option key={g.id} value={g.id}>{g.name}</option>
+                      ))}
+                    </select>
                   </div>
-
-                  {/* Feed Posts */}
-                  <div className="space-y-4">
-                    {feedPosts.map((post) => (
-                      <div
-                        key={post.id}
-                        className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                  <div className="flex gap-2">
+                    <textarea
+                      value={feedPostText}
+                      onChange={(e) => setFeedPostText(e.target.value)}
+                      placeholder="What's on your mind?"
+                      rows={2}
+                      className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    />
+                    <div className="flex flex-col gap-1">
+                      <label className="p-2 h-fit hover:bg-gray-200 dark:hover:bg-gray-600 rounded cursor-pointer transition-colors" title="Attach image">
+                        <ImagePlus className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                        <input type="file" accept="image/*" onChange={handleFeedImageSelect} className="hidden" />
+                      </label>
+                      <button
+                        onClick={handleFeedPost}
+                        disabled={!selectedFeedGroup || (!feedPostText.trim() && !feedPostImage) || postingFeed}
+                        className="px-4 py-2 h-fit bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {/* Group Header */}
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 relative">
-                            <Image
-                              src={post.groupIcon}
-                              alt={post.group}
-                              fill
-                              className="object-cover"
-                            />
-                          </div>
-                          <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
-                            {post.group}
-                          </span>
+                        {postingFeed ? "..." : "Post"}
+                      </button>
+                    </div>
+                  </div>
+                  {feedPostImagePreview && (
+                    <div className="mt-2 relative inline-block">
+                      <img src={feedPostImagePreview} alt="Preview" className="max-h-24 rounded border border-gray-300 dark:border-gray-600" />
+                      <button onClick={handleRemoveFeedImage} className="absolute -top-2 -right-2 p-0.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Feed Posts */}
+              {loadingFeed ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                </div>
+              ) : feedPosts.length > 0 ? (
+                <div className="space-y-4">
+                  {feedPosts.map((post: any) => (
+                    <div
+                      key={post.id}
+                      className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                    >
+                      {/* Group Header */}
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 relative">
+                          <Image
+                            src={post.group_icon_url || `https://robohash.org/${post.group_name}?set=set3`}
+                            alt={post.group_name || "Group"}
+                            fill
+                            className="object-cover"
+                            sizes="32px"
+                          />
                         </div>
+                        <Link
+                          href={`/groups/${post.group_number || post.group_id}`}
+                          className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          {post.group_name}
+                        </Link>
+                      </div>
 
-                        {/* Post Content */}
-                        {post.type === "url" && (
-                          <div className="mb-3">
-                            <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                              <Share2 className="w-4 h-4" />
-                              <span className="font-mono">{post.url}</span>
-                            </div>
+                      {/* Author + Content */}
+                      <div className="flex gap-3 mb-2">
+                        <div className="w-9 h-9 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0 relative">
+                          <Image
+                            src={`https://robohash.org/${post.author_username}?set=set3`}
+                            alt={post.author_display_name || post.author_username}
+                            fill
+                            className="object-cover"
+                            sizes="36px"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <Link
+                              href={`/profile/${post.author_username}`}
+                              className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                            >
+                              {post.author_display_name || post.author_username}
+                            </Link>
+                            {post.author_is_verified && (
+                              <span className="text-blue-500 text-xs">✓</span>
+                            )}
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {new Date(post.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} | {new Date(post.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}
+                            </span>
                           </div>
-                        )}
-
-                        <p className="text-sm text-gray-900 dark:text-gray-100 mb-2">
-                          {post.content}
-                        </p>
-
-                        {/* Post Footer */}
-                        <div className="text-xs text-gray-600 dark:text-gray-400">
-                          (posted by{" "}
-                          <span className="text-blue-600 dark:text-blue-400">
-                            {post.author}
-                          </span>
-                          ) {post.timestamp}
+                          {post.content && (
+                            <p className="text-sm text-gray-900 dark:text-gray-100 mt-1 whitespace-pre-wrap break-words">
+                              {post.content}
+                            </p>
+                          )}
                         </div>
                       </div>
-                    ))}
-                  </div>
+
+                      {/* Post Image */}
+                      {post.image_url && (
+                        <div className="mt-2 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                          <img src={post.image_url} alt="Post image" className="max-w-full max-h-80 object-contain" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <p className="text-sm">No posts yet. Join groups and start posting!</p>
+                </div>
+              )}
             </section>
           </main>
 

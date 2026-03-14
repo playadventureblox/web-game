@@ -27,6 +27,14 @@ export const getGroupSocialLinks = async (req: AuthRequest, res: Response) => {
         instagram,
         tiktok,
         website,
+        discord_title,
+        twitter_title,
+        youtube_title,
+        twitch_title,
+        facebook_title,
+        instagram_title,
+        tiktok_title,
+        website_title,
         "createdAt" as created_at,
         "updatedAt" as updated_at
       FROM group_social_links
@@ -50,6 +58,14 @@ export const getGroupSocialLinks = async (req: AuthRequest, res: Response) => {
            instagram,
            tiktok,
            website,
+           discord_title,
+           twitter_title,
+           youtube_title,
+           twitch_title,
+           facebook_title,
+           instagram_title,
+           tiktok_title,
+           website_title,
            "createdAt" as created_at,
            "updatedAt" as updated_at`,
         [id],
@@ -128,6 +144,14 @@ export const updateGroupSocialLinks = async (
       instagram,
       tiktok,
       website,
+      discord_title,
+      twitter_title,
+      youtube_title,
+      twitch_title,
+      facebook_title,
+      instagram_title,
+      tiktok_title,
+      website_title,
     } = req.body;
 
     // Check if social links exist
@@ -151,8 +175,16 @@ export const updateGroupSocialLinks = async (
           instagram,
           tiktok,
           website,
+          discord_title,
+          twitter_title,
+          youtube_title,
+          twitch_title,
+          facebook_title,
+          instagram_title,
+          tiktok_title,
+          website_title,
           "updatedAt"
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW())
         RETURNING
           id,
           "groupId" as group_id,
@@ -164,6 +196,14 @@ export const updateGroupSocialLinks = async (
           instagram,
           tiktok,
           website,
+          discord_title,
+          twitter_title,
+          youtube_title,
+          twitch_title,
+          facebook_title,
+          instagram_title,
+          tiktok_title,
+          website_title,
           "createdAt" as created_at,
           "updatedAt" as updated_at`,
         [
@@ -176,6 +216,14 @@ export const updateGroupSocialLinks = async (
           instagram || null,
           tiktok || null,
           website || null,
+          discord_title || null,
+          twitter_title || null,
+          youtube_title || null,
+          twitch_title || null,
+          facebook_title || null,
+          instagram_title || null,
+          tiktok_title || null,
+          website_title || null,
         ],
       );
     } else {
@@ -232,6 +280,16 @@ export const updateGroupSocialLinks = async (
         paramIndex++;
       }
 
+      // Title fields
+      const titleFields = ['discord_title', 'twitter_title', 'youtube_title', 'twitch_title', 'facebook_title', 'instagram_title', 'tiktok_title', 'website_title'] as const;
+      for (const field of titleFields) {
+        if (req.body[field] !== undefined) {
+          updates.push(`${field} = $${paramIndex}`);
+          values.push(req.body[field] || null);
+          paramIndex++;
+        }
+      }
+
       if (updates.length === 0) {
         return res.status(400).json({
           success: false,
@@ -257,6 +315,14 @@ export const updateGroupSocialLinks = async (
            instagram,
            tiktok,
            website,
+           discord_title,
+           twitter_title,
+           youtube_title,
+           twitch_title,
+           facebook_title,
+           instagram_title,
+           tiktok_title,
+           website_title,
            "createdAt" as created_at,
            "updatedAt" as updated_at`,
         values,

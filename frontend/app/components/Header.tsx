@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, Menu, Bell, Settings as SettingsIcon, UserPlus, Check } from "lucide-react";
+import { Search, Menu, Bell, Settings as SettingsIcon, UserPlus, Check, Users, Gamepad2 } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import VerifiedBadge from "./VerifiedBadge";
 import { logout, isAuthenticated } from "@/lib/auth";
@@ -27,6 +27,25 @@ interface SearchResult {
   friendship_status?: 'friend' | 'request_sent' | 'request_received' | 'none';
 }
 
+interface GroupSearchResult {
+  id: string;
+  name: string;
+  icon_url?: string;
+  member_count: number;
+  is_verified?: boolean;
+}
+
+interface GameSearchResult {
+  id: string;
+  title: string;
+  thumbnail_url?: string;
+  icon_url?: string;
+  visits: number;
+  current_players: number;
+}
+
+type SearchCategory = 'Players' | 'Groups' | 'Games';
+
 export default function Header({
   searchQuery,
   setSearchQuery,
@@ -44,6 +63,9 @@ export default function Header({
   const [showSwitchAccountsModal, setShowSwitchAccountsModal] = useState(false);
   const [switchSuccess, setSwitchSuccess] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [groupSearchResults, setGroupSearchResults] = useState<GroupSearchResult[]>([]);
+  const [gameSearchResults, setGameSearchResults] = useState<GameSearchResult[]>([]);
+  const [searchCategory, setSearchCategory] = useState<SearchCategory>('Players');
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -98,11 +120,21 @@ useEffect(() => {
       searchTimeoutRef.current = setTimeout(async () => {
         setIsSearching(true);
         try {
-          const response = await searchApi.searchUsers(searchQuery, 8);
-          if (response.success && response.data) {
-            setSearchResults((response.data.users as SearchResult[]) || []);
-            setShowSearchDropdown(true);
+          const [usersRes, groupsRes, gamesRes] = await Promise.all([
+            searchApi.searchUsers(searchQuery, 8),
+            searchApi.searchGroups(searchQuery, 8),
+            searchApi.searchGames(searchQuery, 8),
+          ]);
+          if (usersRes.success && usersRes.data) {
+            setSearchResults((usersRes.data.users as SearchResult[]) || []);
           }
+          if (groupsRes.success && groupsRes.data) {
+            setGroupSearchResults((groupsRes.data.groups as GroupSearchResult[]) || []);
+          }
+          if (gamesRes.success && gamesRes.data) {
+            setGameSearchResults((gamesRes.data.games as GameSearchResult[]) || []);
+          }
+          setShowSearchDropdown(true);
         } catch (error) {
           console.error("Search error:", error);
         } finally {
@@ -258,7 +290,7 @@ useEffect(() => {
                 <Search className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                 <input
                   type="text"
-                  placeholder="Search users..."
+                  placeholder="Search players, groups, games..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => searchResults.length > 0 && setShowSearchDropdown(true)}
@@ -267,77 +299,182 @@ useEffect(() => {
               </div>
 
               {/* Search Results Dropdown */}
-              {showSearchDropdown && (searchResults.length > 0 || isSearching) && (
-                <div className="absolute top-full left-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 max-h-96 overflow-y-auto z-50">
+              {showSearchDropdown && (searchResults.length > 0 || groupSearchResults.length > 0 || gameSearchResults.length > 0 || isSearching) && (
+                <div className="absolute top-full left-0 mt-2 w-96 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 max-h-[28rem] overflow-hidden z-50">
+                  {/* Category Tabs */}
+                  <div className="flex border-b border-gray-200 dark:border-gray-700">
+                    {(['Players', 'Groups', 'Games'] as SearchCategory[]).map((cat) => {
+                      const count = cat === 'Players' ? searchResults.length : cat === 'Groups' ? groupSearchResults.length : gameSearchResults.length;
+                      return (
+                        <button
+                          key={cat}
+                          onClick={() => setSearchCategory(cat)}
+                          className={`flex-1 px-3 py-2.5 text-xs font-semibold transition-colors relative ${
+                            searchCategory === cat
+                              ? 'text-blue-600 dark:text-blue-400'
+                              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                          }`}
+                        >
+                          {cat} {count > 0 && <span className="ml-1 text-[10px] opacity-70">({count})</span>}
+                          {searchCategory === cat && (
+                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="max-h-80 overflow-y-auto">
                   {isSearching ? (
                     <div className="p-4 text-center text-gray-500 dark:text-gray-400">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100 mx-auto"></div>
                     </div>
                   ) : (
                     <>
-                      {searchResults.map((result) => (
-                        <div
-                          key={result.id}
-                          className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-b-0 flex items-center gap-3"
-                        >
-                          <Link
-                            href={`/profile?user=${result.username}`}
-                            className="flex items-center gap-3 flex-1 min-w-0"
-                            onClick={() => {
-                              setShowSearchDropdown(false);
-                              setSearchQuery("");
-                            }}
-                          >
-                            <div className="w-10 h-10 bg-gray-300 dark:bg-gray-600 rounded-full flex-shrink-0"></div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1">
-                                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
-                                  {result.display_name}
-                                </span>
-                                {result.is_verified && <VerifiedBadge size="sm" />}
-                              </div>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                @{result.username}
-                              </p>
-                            </div>
-                          </Link>
-                          
-                          {/* Friend Action Button */}
-                          {isLoggedIn && result.id !== user?.id && (
-                            <div className="flex-shrink-0">
-                              {result.friendship_status === "friend" ? (
-                                <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
-                                  <Check className="w-3 h-3" /> Friends
-                                </span>
-                              ) : result.friendship_status === "request_sent" ? (
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
-                                  Requested
-                                </span>
-                              ) : result.friendship_status === "request_received" ? (
-                                <span className="text-xs text-blue-600 dark:text-blue-400">
-                                  Accept
-                                </span>
-                              ) : (
-                                <button
-                                  onClick={() => handleAddFriend(result.id)}
-                                  className="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-900 rounded-lg transition-colors"
-                                  title="Add Friend"
-                                >
-                                  <UserPlus className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                                </button>
+                      {/* Players Tab */}
+                      {searchCategory === 'Players' && (
+                        searchResults.length > 0 ? (
+                          searchResults.map((result) => (
+                            <div
+                              key={result.id}
+                              className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-b-0 flex items-center gap-3"
+                            >
+                              <Link
+                                href={`/profile/${result.username}`}
+                                className="flex items-center gap-3 flex-1 min-w-0"
+                                onClick={() => {
+                                  setShowSearchDropdown(false);
+                                  setSearchQuery("");
+                                }}
+                              >
+                                <div className="w-10 h-10 bg-gray-300 dark:bg-gray-600 rounded-full flex-shrink-0"></div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                                      {result.display_name}
+                                    </span>
+                                    {result.is_verified && <VerifiedBadge size="sm" />}
+                                  </div>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                    @{result.username}
+                                  </p>
+                                </div>
+                              </Link>
+                              
+                              {/* Friend Action Button */}
+                              {isLoggedIn && result.id !== user?.id && (
+                                <div className="flex-shrink-0">
+                                  {result.friendship_status === "friend" ? (
+                                    <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                                      <Check className="w-3 h-3" /> Friends
+                                    </span>
+                                  ) : result.friendship_status === "request_sent" ? (
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      Requested
+                                    </span>
+                                  ) : result.friendship_status === "request_received" ? (
+                                    <span className="text-xs text-blue-600 dark:text-blue-400">
+                                      Accept
+                                    </span>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleAddFriend(result.id)}
+                                      className="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-900 rounded-lg transition-colors"
+                                      title="Add Friend"
+                                    >
+                                      <UserPlus className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                    </button>
+                                  )}
+                                </div>
                               )}
                             </div>
-                          )}
-                        </div>
-                      ))}
-                      
-                      {searchResults.length === 0 && (
-                        <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
-                          No users found
-                        </div>
+                          ))
+                        ) : (
+                          <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
+                            No players found
+                          </div>
+                        )
+                      )}
+
+                      {/* Groups Tab */}
+                      {searchCategory === 'Groups' && (
+                        groupSearchResults.length > 0 ? (
+                          groupSearchResults.map((group) => (
+                            <Link
+                              key={group.id}
+                              href={`/groups/${group.id}`}
+                              onClick={() => {
+                                setShowSearchDropdown(false);
+                                setSearchQuery("");
+                              }}
+                              className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-b-0 flex items-center gap-3"
+                            >
+                              <div className="w-10 h-10 bg-gray-300 dark:bg-gray-600 rounded flex-shrink-0 overflow-hidden relative">
+                                {group.icon_url ? (
+                                  <Image src={group.icon_url} alt={group.name} fill className="object-cover" sizes="40px" />
+                                ) : (
+                                  <Users className="w-5 h-5 text-gray-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                                    {group.name}
+                                  </span>
+                                  {group.is_verified && <VerifiedBadge size="sm" />}
+                                </div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  {group.member_count?.toLocaleString()} members
+                                </p>
+                              </div>
+                            </Link>
+                          ))
+                        ) : (
+                          <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
+                            No groups found
+                          </div>
+                        )
+                      )}
+
+                      {/* Games Tab */}
+                      {searchCategory === 'Games' && (
+                        gameSearchResults.length > 0 ? (
+                          gameSearchResults.map((game) => (
+                            <Link
+                              key={game.id}
+                              href={`/games/${game.id}`}
+                              onClick={() => {
+                                setShowSearchDropdown(false);
+                                setSearchQuery("");
+                              }}
+                              className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-b-0 flex items-center gap-3"
+                            >
+                              <div className="w-10 h-10 bg-gray-300 dark:bg-gray-600 rounded flex-shrink-0 overflow-hidden relative">
+                                {game.thumbnail_url || game.icon_url ? (
+                                  <Image src={game.thumbnail_url || game.icon_url || ''} alt={game.title} fill className="object-cover" sizes="40px" />
+                                ) : (
+                                  <Gamepad2 className="w-5 h-5 text-gray-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate block">
+                                  {game.title}
+                                </span>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  {game.visits?.toLocaleString() || 0} visits · {game.current_players || 0} playing
+                                </p>
+                              </div>
+                            </Link>
+                          ))
+                        ) : (
+                          <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
+                            No games found
+                          </div>
+                        )
                       )}
                     </>
                   )}
+                  </div>
                 </div>
               )}
             </div>

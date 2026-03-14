@@ -665,6 +665,18 @@ export const groupsApi = {
     });
   },
 
+  // Get feed of recent wall posts from user's groups
+  getMyGroupFeed: async (limit = 20, offset = 0): Promise<ApiResponse<{ posts: unknown[] }>> => {
+    const token = storage.getAccessToken();
+    if (!token) {
+      return { success: false, error: "No authentication token found" };
+    }
+    return apiCall(`/groups/feed/me?limit=${limit}&offset=${offset}`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  },
+
   // Get groups for a specific user (public)
   getGroupsForUser: async (userId: string): Promise<ApiResponse<{ groups: unknown[] }>> => {
     return apiCall(`/groups/user/${userId}`, {
@@ -700,6 +712,7 @@ export const groupsApi = {
   createGroupWallPost: async (
     id: string,
     content: string,
+    imageUrl?: string,
   ): Promise<ApiResponse<{ post: unknown }>> => {
     const token = storage.getAccessToken();
     if (!token) {
@@ -714,7 +727,7 @@ export const groupsApi = {
       headers: {
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, imageUrl }),
     });
   },
 
@@ -1712,6 +1725,20 @@ export const searchApi = {
   // Quick search for autocomplete
   quickSearch: async (query: string): Promise<ApiResponse<{ users: unknown[] }>> => {
     return apiCall(`/search/quick?q=${encodeURIComponent(query)}`, {
+      method: "GET",
+    });
+  },
+
+  // Search groups
+  searchGroups: async (query: string, limit = 8): Promise<ApiResponse<{ groups: unknown[] }>> => {
+    return apiCall(`/search/groups?q=${encodeURIComponent(query)}&limit=${limit}`, {
+      method: "GET",
+    });
+  },
+
+  // Search games
+  searchGames: async (query: string, limit = 8): Promise<ApiResponse<{ games: unknown[] }>> => {
+    return apiCall(`/search/games?q=${encodeURIComponent(query)}&limit=${limit}`, {
       method: "GET",
     });
   },

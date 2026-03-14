@@ -37,7 +37,7 @@ const AvatarPage = () => {
       "Pets",
     ],
     Characters: ["Purchased", "Creations"],
-    Clothing: ["Tops", "Outerwear", "Bottoms", "Shoes", "Classic"],
+    Clothing: ["Outerwear", "Classic"],
     Accessories: [
       "Head",
       "Face",

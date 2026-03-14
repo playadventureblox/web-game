@@ -1398,6 +1398,7 @@ export const getGroupWallPosts = async (req: Request, res: Response) => {
       `SELECT
         gwp.id,
         gwp.content,
+        gwp."imageUrl" as image_url,
         gwp.likes,
         gwp."replyCount" as reply_count,
         gwp."createdAt" as created_at,
@@ -1452,7 +1453,7 @@ export const createGroupWallPost = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId;
     const { id } = req.params;
-    const { content } = req.body;
+    const { content, imageUrl } = req.body;
 
     if (!userId) {
       return res.status(401).json({
@@ -1461,10 +1462,10 @@ export const createGroupWallPost = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    if (!content || !content.trim()) {
+    if ((!content || !content.trim()) && !imageUrl) {
       return res.status(400).json({
         success: false,
-        message: "Content is required",
+        message: "Content or image is required",
       });
     }
 
@@ -1488,15 +1489,16 @@ export const createGroupWallPost = async (req: AuthRequest, res: Response) => {
 
     const postId = uuidv4();
     await db.query(
-      `INSERT INTO group_wall_posts (id, "groupId", "authorId", content, "createdAt", "updatedAt")
-       VALUES ($1, $2, $3, $4, NOW(), NOW())`,
-      [postId, groupId, userId, content.trim()],
+      `INSERT INTO group_wall_posts (id, "groupId", "authorId", content, "imageUrl", "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
+      [postId, groupId, userId, content?.trim() || '', imageUrl || null],
     );
 
     const postResult = await db.query(
       `SELECT
         gwp.id,
         gwp.content,
+        gwp."imageUrl" as image_url,
         gwp.likes,
         gwp."replyCount" as reply_count,
         gwp."createdAt" as created_at,
@@ -2628,6 +2630,62 @@ export const deleteGroupRole = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({
       success: false,
       message: "Server error",
+    });
+  }
+};
+
+/**
+ * @route   GET /api/v1/groups/feed/me
+ * @desc    Get a feed of recent wall posts from all groups the user is a member of
+ * @access  Private
+ */
+export const getMyGroupFeed = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+    const offset = parseInt(req.query.offset as string) || 0;
+
+    const feedResult = await db.query(
+      `SELECT
+        gwp.id,
+        gwp.content,
+        gwp."imageUrl" as image_url,
+        gwp.likes,
+        gwp."replyCount" as reply_count,
+        gwp."createdAt" as created_at,
+        gwp."authorId" as author_id,
+        u.username as author_username,
+        u."displayName" as author_display_name,
+        u."isVerified" as author_is_verified,
+        g.id as group_id,
+        g.name as group_name,
+        g."iconUrl" as group_icon_url,
+        g."groupNumber" as group_number
+      FROM group_wall_posts gwp
+      INNER JOIN group_members gm ON gm."groupId" = gwp."groupId" AND gm."userId" = $1
+      LEFT JOIN users u ON gwp."authorId" = u.id
+      LEFT JOIN groups g ON gwp."groupId" = g.id
+      ORDER BY gwp."createdAt" DESC
+      LIMIT $2 OFFSET $3`,
+      [userId, limit, offset],
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        posts: feedResult.rows,
+      },
+    });
+  } catch (error) {
+    console.error("Get my group feed error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: process.env.NODE_ENV === "development" ? error : undefined,
     });
   }
 };

@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { body, validationResult } from 'express-validator';
 
 /**
- * Validation middleware for signup
+ *middleware for signup
  * Matches frontend SignupForm fields: month, day, year, username, password, gender
  */
 export const validateSignup = [

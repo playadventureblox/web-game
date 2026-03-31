@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-AdventureBlox is a web-based gaming platform inspired by Roblox, designed to provide a safe, social, and engaging environment for players and game developers. This phase focuses on the platform infrastructure, social features, and economy system without 3D implementation.
+AdventureBlox is  web-based gaming platform inspired by Roblox, designed to provide a safe, social, and engaging environment for players and game developers. This phase focuses on the platform infrastructure, social features, and economy system without 3D implementation.
 
 ---
 

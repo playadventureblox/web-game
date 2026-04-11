@@ -176,13 +176,9 @@ const ConfigureGroupPage = () => {
       "Information",
       "Settings",
       "Social Links",
-      "Revenue",
-      "Payouts",
       "Members",
       "Roles",
       "Alliances",
-      "Shout",
-      "Wall",
       "Advertise Group",
     ];
     return section && sections.includes(section) ? section : "Information";
@@ -216,12 +212,9 @@ const ConfigureGroupPage = () => {
       { name: "Information", hasNew: false },
       { name: "Settings", hasNew: false },
       { name: "Social Links", hasNew: false },
-      { name: "Revenue", hasNew: false },
-      { name: "Payouts", hasNew: false },
       { name: "Members", hasNew: false },
       { name: "Roles", hasNew: false },
       { name: "Alliances", hasNew: false },
-      { name: "Wall", hasNew: false },
       { name: "Advertise Group", hasNew: false },
     ],
     [],
@@ -1706,76 +1699,6 @@ const ConfigureGroupPage = () => {
                   </div>
                 )}
 
-                  {activeSection === "Revenue" && (
-                  <div className="space-y-6">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      Group Revenue
-                    </h2>
-
-                    <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
-                      <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-                        ◈ 0
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Total Group Funds
-                      </p>
-                    </div>
-
-                    <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-                      <table className="w-full">
-                        <thead className="bg-gray-100 dark:bg-gray-700">
-                          <tr>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
-                              Date
-                            </th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
-                              Source
-                            </th>
-                            <th className="px-4 py-3 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
-                              Amount
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td
-                              colSpan={3}
-                              className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400"
-                            >
-                              No revenue transactions
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                  {activeSection === "Payouts" && (
-                  <div className="space-y-6">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      Group Payouts
-                    </h2>
-
-                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
-                      <p className="text-sm text-blue-900 dark:text-blue-200">
-                        Configure recurring or one-time payouts to group
-                        members.
-                      </p>
-                    </div>
-
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
-                      Create Payout
-                    </button>
-
-                    <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        No payouts configured
-                      </p>
-                    </div>
-                  </div>
-                )}
-
                   {activeSection === "Members" && (
                   <div className="space-y-6">
                     {/* Tabs */}
@@ -2615,45 +2538,6 @@ const ConfigureGroupPage = () => {
                         )}
                       </div>
                     )}
-                  </div>
-                )}
-
-                  {activeSection === "Wall" && (
-                  <div className="space-y-6">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      Wall Settings
-                    </h2>
-
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        id="enableWall"
-                        className="w-4 h-4"
-                        defaultChecked
-                      />
-                      <label
-                        htmlFor="enableWall"
-                        className="text-sm text-gray-900 dark:text-gray-100"
-                      >
-                        Enable group wall
-                      </label>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
-                        Who can post on the wall?
-                      </label>
-                      <select className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-                        <option>All members</option>
-                        <option>Moderators and above</option>
-                        <option>Admins and above</option>
-                        <option>Owner only</option>
-                      </select>
-                    </div>
-
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
-                      Save Wall Settings
-                    </button>
                   </div>
                 )}
 

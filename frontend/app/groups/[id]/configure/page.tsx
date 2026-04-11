@@ -184,8 +184,6 @@ const ConfigureGroupPage = () => {
       "Shout",
       "Wall",
       "Advertise Group",
-      "Analytics",
-      "Verification",
     ];
     return section && sections.includes(section) ? section : "Information";
   };
@@ -225,8 +223,6 @@ const ConfigureGroupPage = () => {
       { name: "Alliances", hasNew: false },
       { name: "Wall", hasNew: false },
       { name: "Advertise Group", hasNew: false },
-      { name: "Analytics", hasNew: false },
-      { name: "Verification", hasNew: false },
     ],
     [],
   );
@@ -2658,86 +2654,6 @@ const ConfigureGroupPage = () => {
 
                     <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
                       Save Wall Settings
-                    </button>
-                  </div>
-                )}
-
-                  {activeSection === "Analytics" && (
-                  <div className="space-y-6">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      Group Analytics
-                    </h2>
-
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                        <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                          142
-                        </h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Total Members
-                        </p>
-                      </div>
-                      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                        <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                          +12
-                        </h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          New This Week
-                        </p>
-                      </div>
-                      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                        <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                          45
-                        </h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Active Today
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-6">
-                      <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                        Member Growth
-                      </h3>
-                      <div className="h-64 flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded">
-                        <p className="text-gray-500 dark:text-gray-400">
-                          Chart placeholder
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                  {activeSection === "Verification" && (
-                  <div className="space-y-6">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      Group Verification
-                    </h2>
-
-                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
-                      <p className="text-sm text-blue-900 dark:text-blue-200">
-                        Verified groups get a special badge and increased
-                        visibility.
-                      </p>
-                    </div>
-
-                    <div className="space-y-4">
-                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                        Requirements:
-                      </h3>
-                      <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                        <li>✓ At least 100 members</li>
-                        <li>✓ Active for at least 6 months</li>
-                        <li>✗ No policy violations in the past year</li>
-                        <li>✓ Complete group information</li>
-                      </ul>
-                    </div>
-
-                    <button
-                      className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 rounded cursor-not-allowed text-sm"
-                      disabled
-                    >
-                      Request Verification (Requirements not met)
                     </button>
                   </div>
                 )}

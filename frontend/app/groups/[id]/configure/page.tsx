@@ -946,7 +946,6 @@ const ConfigureGroupPage = () => {
       manageMembers: false,
       deleteMembers: false,
       banMembers: false,
-      viewAuditLog: false,
       spendGroupFunds: false,
       advertiseGroup: false,
       manageAds: false,

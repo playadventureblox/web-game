@@ -186,7 +186,6 @@ const ConfigureGroupPage = () => {
       "Wall",
       "Advertise Group",
       "Analytics",
-      "Audit Log",
       "Verification",
     ];
     return section && sections.includes(section) ? section : "Information";
@@ -228,7 +227,6 @@ const ConfigureGroupPage = () => {
       { name: "Wall", hasNew: false },
       { name: "Advertise Group", hasNew: false },
       { name: "Analytics", hasNew: false },
-      { name: "Audit Log", hasNew: false },
       { name: "Verification", hasNew: false },
     ],
     [],
@@ -2723,51 +2721,6 @@ const ConfigureGroupPage = () => {
                           Chart placeholder
                         </p>
                       </div>
-                    </div>
-                  </div>
-                )}
-
-                  {activeSection === "Audit Log" && (
-                  <div className="space-y-6">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      Audit Log
-                    </h2>
-
-                    <div className="flex gap-3">
-                      <select className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-                        <option>All Actions</option>
-                        <option>Member Changes</option>
-                        <option>Role Changes</option>
-                        <option>Settings Changes</option>
-                      </select>
-                    </div>
-
-                    <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-                      <table className="w-full">
-                        <thead className="bg-gray-100 dark:bg-gray-700">
-                          <tr>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
-                              Date
-                            </th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
-                              User
-                            </th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
-                              Action
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td
-                              colSpan={3}
-                              className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400"
-                            >
-                              No audit log entries
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
                     </div>
                   </div>
                 )}

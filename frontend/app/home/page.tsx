@@ -260,96 +260,84 @@ const HomePage = () => {
               </div>
             </section>
 
-            {/* Continue Playing Section */}
-            <section className="mb-12">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  Continue
+            {/* Recently Played Section */}
+            <section className="mb-10">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  Recently Played
                 </h2>
                 <Link
                   href="/continue"
-                  className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 font-semibold"
+                  className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-full transition-colors"
                 >
                   See All
-                  <ChevronRight className="w-4 h-4" />
                 </Link>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {games.slice(0, 4).map((game) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {games.slice(0, 6).map((game) => (
                   <div
-                    key={`continue-${game.id}`}
-                    className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                    key={`recent-${game.id}`}
+                    className="cursor-pointer group"
                   >
-                    <div className="aspect-video bg-gray-200 dark:bg-gray-700 flex items-center justify-center relative group">
-                      <div className="text-gray-400 dark:text-gray-500 text-sm">
+                    <div className="aspect-video bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden relative">
+                      <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs">
                         Game Thumbnail
                       </div>
-
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2 rounded">
+                        <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-1.5 rounded text-xs">
                           PLAY
                         </button>
                       </div>
                     </div>
-
-                    <div className="p-3">
-                      <h3 className="font-semibold text-gray-900 text-sm mb-1 truncate">
-                        {game.title}
-                      </h3>
-                      <div className="flex items-center gap-1 text-xs text-gray-600">
-                        <span className="text-green-600">👍</span>
-                        <span>{game.rating}</span>
-                      </div>
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-xs mt-1.5 truncate">
+                      {game.title}
+                    </h3>
+                    <div className="flex items-center gap-2 text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
+                      <span className="text-green-600 dark:text-green-500">👍 {game.rating}</span>
+                      <span>👤 1.2K</span>
                     </div>
                   </div>
                 ))}
               </div>
             </section>
 
-            {/* Favorites Section */}
-            <section className="mb-12">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  Favorites
+            {/* My Favorites Section */}
+            <section className="mb-10">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  My Favorites
                 </h2>
                 <Link
                   href="/favorites"
-                  className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 font-semibold"
+                  className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-full transition-colors"
                 >
                   See All
-                  <ChevronRight className="w-4 h-4" />
                 </Link>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {games.slice(0, 4).map((game) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {games.slice(0, 6).map((game) => (
                   <div
                     key={`favorites-${game.id}`}
-                    className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                    className="cursor-pointer group"
                   >
-                    <div className="aspect-video bg-gray-200 dark:bg-gray-700 flex items-center justify-center relative group">
-                      <div className="text-gray-400 dark:text-gray-500 text-sm">
+                    <div className="aspect-video bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden relative">
+                      <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs">
                         Game Thumbnail
                       </div>
-
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2 rounded">
+                        <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-1.5 rounded text-xs">
                           PLAY
                         </button>
                       </div>
                     </div>
-
-                    <div className="p-3">
-                      <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm mb-1 truncate">
-                        {game.title}
-                      </h3>
-                      <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
-                        <span className="text-green-600 dark:text-green-500">
-                          👍
-                        </span>
-                        <span>{game.rating}</span>
-                      </div>
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-xs mt-1.5 truncate">
+                      {game.title}
+                    </h3>
+                    <div className="flex items-center gap-2 text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
+                      <span className="text-green-600 dark:text-green-500">👍 {game.rating}</span>
+                      <span>👤 856</span>
                     </div>
                   </div>
                 ))}

@@ -617,20 +617,6 @@ useEffect(() => {
                         >
                           Settings
                         </Link>
-                        <Link
-                          href="/settings"
-                          className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                          onClick={() => setSettingsOpen(false)}
-                        >
-                          Quick Sign In
-                        </Link>
-                        <Link
-                          href="/settings"
-                          className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                          onClick={() => setSettingsOpen(false)}
-                        >
-                          Help & Safety
-                        </Link>
                         <button
                           className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                           onClick={handleSwitchAccountsClick}

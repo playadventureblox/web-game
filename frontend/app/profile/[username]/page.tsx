@@ -178,50 +178,9 @@ const ProfilePage = () => {
 
   const tabs = ["About", "Creations"];
 
-  // Mock data
-  const currentlyWearing = [
-    { id: 1, name: "Man Torso", type: "Torso", image: "", price: "" },
-    { id: 2, name: "Man Right Arm", type: "Arm", image: "", price: "" },
-    { id: 3, name: "Man Left Arm", type: "Arm", image: "", price: "" },
-    { id: 4, name: "Man Left Leg", type: "Leg", image: "", price: "" },
-    { id: 5, name: "Man Right Leg", type: "Leg", image: "", price: "" },
-    { id: 6, name: "Pal Hair", type: "Hair", image: "", price: "Free" },
-    {
-      id: 7,
-      name: "Blue and Black Motorcycle Shirt",
-      type: "Shirt",
-      image: "",
-      price: "Free",
-    },
-    {
-      id: 8,
-      name: "Dark Green Jeans",
-      type: "Pants",
-      image: "",
-      price: "Free",
-    },
-    { id: 9, name: "Hello", type: "Emote", image: "", price: "Free" },
-    { id: 10, name: "Stadium", type: "Emote", image: "", price: "Free" },
-    { id: 11, name: "Point2", type: "Emote", image: "", price: "Free" },
-    { id: 12, name: "Shrug", type: "Emote", image: "", price: "Free" },
-  ];
-
-  const favorites = [
-    {
-      id: 1,
-      name: "HOW TO TRAIN YOUR DRAGON",
-      rating: "95%",
-      plays: "2.5K",
-      image: "",
-    },
-    {
-      id: 2,
-      name: "Teamwork Puzzles 2 (Obby)",
-      rating: "92%",
-      plays: "3.3K",
-      image: "",
-    },
-  ];
+  // Data will come from real API
+  const currentlyWearing: any[] = [];
+  const favorites: any[] = [];
 
 
   // Fetch friends when profile loads and setup real-time updates
@@ -482,54 +441,9 @@ const ProfilePage = () => {
     );
   };
 
-  // Roblox Badges
-  const robloxBadges = [{ id: 1, name: "Veteran", image: "" }];
-
-  // Player Badges (original badges)
-  const badges = [
-    {
-      id: 1,
-      name: "First Catch",
-      type: "event",
-      image:
-        "https://tr.rbxcdn.com/180DAY-f5e67ede903b5b601dbfeeae8cf30ca4/150/150/Image/Webp/noFilter",
-    },
-    {
-      id: 2,
-      name: "Ruby Rank Compl...",
-      type: "achievement",
-      image:
-        "https://tr.rbxcdn.com/180DAY-f27876e227d1db9d246d938e7e2c1bfa/150/150/Image/Webp/noFilter",
-    },
-    {
-      id: 3,
-      name: "750 Gems",
-      type: "currency",
-      image:
-        "https://tr.rbxcdn.com/180DAY-b5f5ec7123eac51331066e41f32f0744/150/150/Image/Webp/noFilter",
-    },
-    {
-      id: 4,
-      name: "150 Gems",
-      type: "currency",
-      image:
-        "https://tr.rbxcdn.com/180DAY-4a009a65726fc790a5e98d8f97783d29/150/150/Image/Webp/noFilter",
-    },
-    {
-      id: 5,
-      name: "30 Gems",
-      type: "currency",
-      image:
-        "https://tr.rbxcdn.com/180DAY-76c505966c1b2a60d6a2f133309170a5/150/150/Image/Webp/noFilter",
-    },
-    {
-      id: 6,
-      name: "Welcome!",
-      type: "welcome",
-      image:
-        "https://tr.rbxcdn.com/180DAY-2d822d79429f504344a02d0550c4295f/150/150/Image/Webp/noFilter",
-    },
-  ];
+  // Badges will come from real API
+  const robloxBadges: any[] = [];
+  const badges: any[] = [];
 
   // Mock experiences for Creations tab
   const experiences = [
@@ -1654,33 +1568,18 @@ const ProfilePage = () => {
                   </button>
                 </div>
 
-                <div className="flex gap-4">
-                  {favorites.map((game) => (
-                    <div
-                      key={game.id}
-                      className="w-[200px] cursor-pointer group"
-                    >
-                      <div className="w-full aspect-[4/3] rounded-lg overflow-hidden bg-gradient-to-br from-blue-400 to-blue-600 border border-gray-200 dark:border-gray-700 group-hover:border-gray-400 dark:group-hover:border-gray-500 transition-colors flex items-center justify-center">
-                        <span className="text-white font-bold text-sm">
-                          Game Thumbnail
-                        </span>
+                {favorites.length > 0 ? (
+                  <div className="flex gap-4">
+                    {favorites.map((game: any) => (
+                      <div key={game.id} className="w-[200px] cursor-pointer group">
+                        <div className="w-full aspect-[4/3] rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 border border-gray-200 dark:border-gray-700" />
+                        <h3 className="mt-2 text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-2">{game.name}</h3>
                       </div>
-                      <h3 className="mt-2 text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-2">
-                        {game.name}
-                      </h3>
-                      <div className="flex items-center gap-4 mt-1 text-xs text-gray-600 dark:text-gray-400">
-                        <div className="flex items-center gap-1">
-                          <ThumbsUp className="w-3 h-3" />
-                          <span>{game.rating}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Users className="w-3 h-3" />
-                          <span>{game.plays}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 py-4">No favorite games yet.</p>
+                )}
               </div>
 
               {/* Roblox Badges */}
@@ -1694,39 +1593,18 @@ const ProfilePage = () => {
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
-                <div className="flex gap-4">
-                  {robloxBadges.map((badge) => (
-                    <div key={badge.id} className="cursor-pointer group">
-                      <div className="w-[120px] aspect-square rounded-lg overflow-hidden bg-gradient-to-b from-blue-500 to-blue-600 border border-gray-200 dark:border-gray-700 group-hover:border-gray-400 dark:group-hover:border-gray-500 transition-colors flex items-center justify-center">
-                        <div className="text-center text-white">
-                          <div className="text-2xl font-bold">1 YR+</div>
-                          <svg
-                            className="w-10 h-10 mx-auto mt-1"
-                            viewBox="0 0 40 40"
-                            fill="none"
-                          >
-                            <circle
-                              cx="20"
-                              cy="20"
-                              r="16"
-                              fill="#1a73e8"
-                              stroke="white"
-                              strokeWidth="2"
-                            />
-                            <path
-                              d="M20 8 L20 32 M8 20 L32 20"
-                              stroke="white"
-                              strokeWidth="3"
-                            />
-                          </svg>
-                        </div>
+                {robloxBadges.length > 0 ? (
+                  <div className="flex gap-4">
+                    {robloxBadges.map((badge: any) => (
+                      <div key={badge.id} className="cursor-pointer group">
+                        <div className="w-[120px] aspect-square rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 border border-gray-200 dark:border-gray-700" />
+                        <p className="mt-2 text-sm text-gray-900 dark:text-gray-100 text-center">{badge.name}</p>
                       </div>
-                      <p className="mt-2 text-sm text-gray-900 dark:text-gray-100 text-center">
-                        {badge.name}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 py-4">No badges earned yet.</p>
+                )}
               </div>
 
               {/* Badges */}
@@ -1740,29 +1618,20 @@ const ProfilePage = () => {
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
-                <div className="flex gap-4">
-                  {badges.map((badge) => (
-                    <div key={badge.id} className="cursor-pointer group">
-                      <div className="w-[120px] aspect-square rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 border border-gray-200 dark:border-gray-700 group-hover:border-gray-400 dark:group-hover:border-gray-500 transition-colors relative">
-                        {badge.image ? (
-                          <Image
-                            src={badge.image}
-                            alt={badge.name}
-                            fill
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center">
-                            <div className="w-12 h-12 bg-white/20 rounded-full"></div>
-                          </div>
-                        )}
+                {badges.length > 0 ? (
+                  <div className="flex gap-4">
+                    {badges.map((badge: any) => (
+                      <div key={badge.id} className="cursor-pointer group">
+                        <div className="w-[120px] aspect-square rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 border border-gray-200 dark:border-gray-700 relative">
+                          {badge.image && <Image src={badge.image} alt={badge.name} fill className="object-cover" />}
+                        </div>
+                        <p className="mt-2 text-xs text-gray-900 dark:text-gray-100 text-center truncate">{badge.name}</p>
                       </div>
-                      <p className="mt-2 text-xs text-gray-900 dark:text-gray-100 text-center truncate">
-                        {badge.name}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 py-4">No player badges yet.</p>
+                )}
               </div>
 
               {/* Statistics */}

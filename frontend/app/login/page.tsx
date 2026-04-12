@@ -253,17 +253,6 @@ const LoginPage = () => {
                 </Link>
               </div>
 
-              {/* Alternative Login Options */}
-              <div className="space-y-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setShowEmailCodeModal(true)}
-                  className="w-full bg-gray-700/70 border border-gray-600 text-white hover:bg-gray-700 h-12 rounded"
-                >
-                  Email Me a One-Time Code
-                </button>
-              </div>
-
               {/* Sign Up Link */}
               <div className="text-center mt-6">
                 <span className="text-gray-400 text-sm">

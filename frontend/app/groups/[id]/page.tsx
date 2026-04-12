@@ -666,9 +666,7 @@ const GroupDetailPage = () => {
                   )}
                   {otherGroups.length > 0 && (
                     <div>
-                      {primaryGroup && (
-                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-2 mb-1">My Communities</p>
-                      )}
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-2 mb-1">My Groups</p>
                       {otherGroups.map(renderGroupItem)}
                     </div>
                   )}
@@ -824,13 +822,14 @@ const GroupDetailPage = () => {
                               <button
                                 onClick={async () => {
                                   setGroupMenuOpen(false);
-                                  if (groupId) {
+                                  const groupUuid = currentGroupDetails?.id;
+                                  if (groupUuid) {
                                     setActionLoading(true);
                                     const response =
-                                      await groupsApi.makePrimaryGroup(groupId);
+                                      await groupsApi.makePrimaryGroup(groupUuid);
                                     setActionLoading(false);
                                     if (response.success) {
-                                      setPrimaryGroupId(currentGroupDetails?.id || null);
+                                      setPrimaryGroupId(groupUuid);
                                       setSuccessMessage({
                                         title: "Success",
                                         message: "Group set as primary!",

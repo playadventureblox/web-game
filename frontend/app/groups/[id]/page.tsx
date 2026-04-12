@@ -133,6 +133,8 @@ const GroupDetailPage = () => {
     endDate: "",
     location: "",
   });
+  const [eventImage, setEventImage] = useState<File | null>(null);
+  const [eventImagePreview, setEventImagePreview] = useState<string | null>(null);
 
   // Fetch user's groups for sidebar + primary group
   useEffect(() => {
@@ -231,9 +233,17 @@ const GroupDetailPage = () => {
     if (!groupUuid || !eventForm.title || !eventForm.startDate || !eventForm.endDate) return;
     setCreatingEvent(true);
     try {
+      let imageUrl: string | undefined;
+      if (eventImage) {
+        const uploadResponse = await uploadApi.uploadImage(eventImage, 'event');
+        if (uploadResponse.success && uploadResponse.data) {
+          imageUrl = (uploadResponse.data as { url: string }).url;
+        }
+      }
       const response = await groupsApi.createGroupEvent(groupUuid, {
         title: eventForm.title,
         description: eventForm.description || undefined,
+        imageUrl,
         startDate: eventForm.startDate,
         endDate: eventForm.endDate,
         location: eventForm.location || undefined,
@@ -242,6 +252,9 @@ const GroupDetailPage = () => {
         setEvents([...events, response.data.event as any]);
         setShowCreateEvent(false);
         setEventForm({ title: "", description: "", startDate: "", endDate: "", location: "" });
+        setEventImage(null);
+        if (eventImagePreview) URL.revokeObjectURL(eventImagePreview);
+        setEventImagePreview(null);
       }
     } catch (error) {
       console.error("Error creating event:", error);
@@ -544,82 +557,6 @@ const GroupDetailPage = () => {
       setShowSuccessModal(true);
     }
   };
-
-  // Mock store items
-  const storeItems = [
-    {
-      id: 1,
-      name: "Cartoony White Scarf",
-      image: "https://robohash.org/scarf1?set=set3",
-      price: 50,
-    },
-    {
-      id: 2,
-      name: "Cartoony Purple Scarf",
-      image: "https://robohash.org/scarf2?set=set3",
-      price: 50,
-    },
-    {
-      id: 3,
-      name: "Cartoony Blue Scarf",
-      image: "https://robohash.org/scarf3?set=set3",
-      price: 50,
-    },
-    {
-      id: 4,
-      name: "Cartoony Green Scarf",
-      image: "https://robohash.org/scarf4?set=set3",
-      price: 50,
-    },
-    {
-      id: 5,
-      name: "Cartoony Red Scarf",
-      image: "https://robohash.org/scarf5?set=set3",
-      price: 50,
-    },
-    {
-      id: 6,
-      name: "Cartoony Rainbow Scarf",
-      image: "https://robohash.org/scarf6?set=set3",
-      price: 50,
-    },
-    {
-      id: 7,
-      name: "Grey Scarf",
-      image: "https://robohash.org/greyscarf?set=set3",
-      price: 50,
-    },
-    {
-      id: 8,
-      name: "Green Scarf",
-      image: "https://robohash.org/greenscarf?set=set3",
-      price: 50,
-    },
-    {
-      id: 9,
-      name: "Forest Green Scarf",
-      image: "https://robohash.org/forestscarf?set=set3",
-      price: 50,
-    },
-    {
-      id: 10,
-      name: "Pink Scarf",
-      image: "https://robohash.org/pinkscarf?set=set3",
-      price: 50,
-    },
-    {
-      id: 11,
-      name: "Blue Scarf",
-      image: "https://robohash.org/bluescarf?set=set3",
-      price: 50,
-    },
-    {
-      id: 12,
-      name: "Red Scarf",
-      image: "https://robohash.org/redscarf?set=set3",
-      price: 50,
-    },
-  ];
 
   const tabs = ["About", "Store", "Alliances", "Events"];
 
@@ -1389,58 +1326,20 @@ const GroupDetailPage = () => {
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   Store
                 </h2>
-                <Link
-                  href="/groups/store"
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-semibold"
-                >
-                  See All →
-                </Link>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {storeItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-                  >
-                    <div className="aspect-video bg-gray-200 dark:bg-gray-700 rounded overflow-hidden relative">
-                      <Image
-                        src={item.image}
-                        alt={item.name}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <div className="p-3">
-                      <h3
-                        className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate"
-                        title={item.name}
-                      >
-                        {item.name}
-                      </h3>
-                      <div className="flex items-center gap-1 mt-1">
-                        <div className="w-4 h-4 bg-gray-800 dark:bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-white dark:text-gray-900 text-[10px] font-bold">
-                            ◈
-                          </span>
-                        </div>
-                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                          {item.price}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex items-center justify-center gap-3 mt-6 text-sm text-gray-600 dark:text-gray-400">
-                <button className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
-                  &lt;
-                </button>
-                <span className="font-medium">Page 1</span>
-                <button className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
-                  &gt;
-                </button>
+              <div className="text-center py-16">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                  No Store Items
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto">
+                  This group doesn&apos;t have any store items yet. Check back later!
+                </p>
               </div>
             </div>
           )}
@@ -1586,6 +1485,40 @@ const GroupDetailPage = () => {
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event Image</label>
+                    <div className="flex items-center gap-3">
+                      <label className="px-4 py-2 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-900 dark:text-gray-100 text-sm font-medium rounded-lg cursor-pointer transition-colors">
+                        {eventImage ? "Change Image" : "Upload Image"}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            if (file.size > 5 * 1024 * 1024) { alert("Image must be under 5MB"); return; }
+                            setEventImage(file);
+                            if (eventImagePreview) URL.revokeObjectURL(eventImagePreview);
+                            setEventImagePreview(URL.createObjectURL(file));
+                          }}
+                          className="hidden"
+                        />
+                      </label>
+                      {eventImage && (
+                        <button
+                          onClick={() => { setEventImage(null); if (eventImagePreview) URL.revokeObjectURL(eventImagePreview); setEventImagePreview(null); }}
+                          className="text-xs text-red-500 hover:underline"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    {eventImagePreview && (
+                      <div className="mt-2">
+                        <img src={eventImagePreview} alt="Event preview" className="max-h-32 rounded-lg border border-gray-300 dark:border-gray-600" />
+                      </div>
+                    )}
+                  </div>
                   <button
                     onClick={handleCreateEvent}
                     disabled={!eventForm.title || !eventForm.startDate || !eventForm.endDate || creatingEvent}
@@ -1612,8 +1545,14 @@ const GroupDetailPage = () => {
                     return (
                       <div
                         key={event.id}
-                        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5"
+                        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
                       >
+                        {event.image_url && (
+                          <div className="w-full h-40 bg-gray-200 dark:bg-gray-700 relative">
+                            <Image src={event.image_url} alt={event.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
+                          </div>
+                        )}
+                        <div className="p-5">
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
@@ -1663,6 +1602,7 @@ const GroupDetailPage = () => {
                               <X className="w-4 h-4" />
                             </button>
                           )}
+                        </div>
                         </div>
                       </div>
                     );

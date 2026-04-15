@@ -588,6 +588,18 @@ useEffect(() => {
                     >
                       Redeem Codes
                     </Link>
+                    <Link
+                      href="/adventurebux/gift"
+                      className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium"
+                    >
+                      Gift AdventureBux
+                    </Link>
+                    <Link
+                      href="/adventurebux/giftcards"
+                      className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium"
+                    >
+                      Buy Gift Card
+                    </Link>
                   </div>
                 </div>
 

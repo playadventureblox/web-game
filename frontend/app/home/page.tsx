@@ -9,7 +9,7 @@ import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import ProtectedRoute from "../components/ProtectedRoute";
 import VerifiedBadge from "../components/VerifiedBadge";
-import { usersApi, friendsApi, groupsApi, uploadApi } from "@/lib/api";
+import { usersApi, friendsApi, feedApi, uploadApi } from "@/lib/api";
 import { useRealtime } from "@/contexts/RealtimeContext";
 
 const HomePage = () => {
@@ -25,19 +25,16 @@ const HomePage = () => {
   const [feedPostImage, setFeedPostImage] = useState<File | null>(null);
   const [feedPostImagePreview, setFeedPostImagePreview] = useState<string | null>(null);
   const [postingFeed, setPostingFeed] = useState(false);
-  const [userGroupsList, setUserGroupsList] = useState<any[]>([]);
-  const [selectedFeedGroup, setSelectedFeedGroup] = useState<string>("");
   const { presenceMap } = useRealtime();
 
   // Fetch user data, friends, and feed
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [userResponse, friendsResponse, feedResponse, groupsResponse] = await Promise.all([
+        const [userResponse, friendsResponse, feedResponse] = await Promise.all([
           usersApi.getCurrentUser(),
           friendsApi.getFriends(),
-          groupsApi.getMyGroupFeed(20, 0),
-          groupsApi.getUserGroups(),
+          feedApi.getPosts(20, 0),
         ]);
         
         if (userResponse.success && userResponse.data) {
@@ -56,10 +53,6 @@ const HomePage = () => {
 
         if (feedResponse.success && feedResponse.data) {
           setFeedPosts((feedResponse.data as any).posts || []);
-        }
-
-        if (groupsResponse.success && groupsResponse.data) {
-          setUserGroupsList((groupsResponse.data.groups as any[]) || []);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -84,27 +77,23 @@ const HomePage = () => {
     setFeedPostImagePreview(null);
   };
 
-  // Post to feed (wall of a selected group)
+  // Post to homepage feed
   const handleFeedPost = async () => {
-    if (!selectedFeedGroup || (!feedPostText.trim() && !feedPostImage)) return;
+    if (!feedPostText.trim() && !feedPostImage) return;
     setPostingFeed(true);
     try {
       let imageUrl: string | undefined;
       if (feedPostImage) {
-        const uploadResponse = await uploadApi.uploadImage(feedPostImage, 'wall-post');
+        const uploadResponse = await uploadApi.uploadImage(feedPostImage, 'feed-post');
         if (uploadResponse.success && uploadResponse.data) {
           imageUrl = (uploadResponse.data as { url: string }).url;
         } else {
           alert("Failed to upload image."); setPostingFeed(false); return;
         }
       }
-      const response = await groupsApi.createGroupWallPost(selectedFeedGroup, feedPostText.trim(), imageUrl);
-      if (response.success) {
-        // Refresh feed
-        const feedResponse = await groupsApi.getMyGroupFeed(20, 0);
-        if (feedResponse.success && feedResponse.data) {
-          setFeedPosts((feedResponse.data as any).posts || []);
-        }
+      const response = await feedApi.createPost({ content: feedPostText.trim() || undefined, imageUrl });
+      if (response.success && response.data) {
+        setFeedPosts([(response.data as any).post, ...feedPosts]);
         setFeedPostText("");
         handleRemoveFeedImage();
       }
@@ -288,7 +277,41 @@ const HomePage = () => {
                 My Feed
               </h2>
 
-              {/* Feed shows posts from groups you're in */}
+              {/* Post Composer */}
+              <div className="mb-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">What&apos;s happening today?</p>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3">FEED</h3>
+                <div className="flex gap-2">
+                  <textarea
+                    value={feedPostText}
+                    onChange={(e) => setFeedPostText(e.target.value)}
+                    placeholder="What's on your mind?"
+                    rows={3}
+                    className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  />
+                  <div className="flex flex-col gap-1 justify-end">
+                    <label className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg cursor-pointer transition-colors" title="Attach image">
+                      <ImagePlus className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                      <input type="file" accept="image/*" onChange={handleFeedImageSelect} className="hidden" />
+                    </label>
+                    <button
+                      onClick={handleFeedPost}
+                      disabled={(!feedPostText.trim() && !feedPostImage) || postingFeed}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {postingFeed ? "..." : "Post"}
+                    </button>
+                  </div>
+                </div>
+                {feedPostImagePreview && (
+                  <div className="mt-2 relative inline-block">
+                    <img src={feedPostImagePreview} alt="Preview" className="max-h-24 rounded-lg border border-gray-300 dark:border-gray-600" />
+                    <button onClick={handleRemoveFeedImage} className="absolute -top-2 -right-2 p-0.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {/* Feed Posts */}
               {loadingFeed ? (
@@ -300,55 +323,43 @@ const HomePage = () => {
                   {feedPosts.map((post: any) => (
                     <div
                       key={post.id}
-                      className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
                     >
-                      {/* Group Header */}
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 relative">
-                          <Image
-                            src={post.group_icon_url || `https://robohash.org/${post.group_name}?set=set3`}
-                            alt={post.group_name || "Group"}
-                            fill
-                            className="object-cover"
-                            sizes="32px"
-                          />
-                        </div>
-                        <Link
-                          href={`/groups/${post.group_number || post.group_id}`}
-                          className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
-                        >
-                          {post.group_name}
-                        </Link>
-                      </div>
-
-                      {/* Author + Content */}
-                      <div className="flex gap-3 mb-2">
-                        <div className="w-9 h-9 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0 relative">
+                      {/* Author */}
+                      <div className="flex gap-3">
+                        <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0 relative">
                           <Image
                             src={`https://robohash.org/${post.author_username}?set=set3`}
                             alt={post.author_display_name || post.author_username}
                             fill
                             className="object-cover"
-                            sizes="36px"
+                            sizes="40px"
                           />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
                             <Link
                               href={`/profile/${post.author_username}`}
-                              className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                              className="text-sm font-semibold text-gray-900 dark:text-gray-100 hover:underline"
                             >
                               {post.author_display_name || post.author_username}
                             </Link>
-                            {post.author_is_verified && (
-                              <span className="text-blue-500 text-xs">✓</span>
-                            )}
+                            {post.author_is_verified && <VerifiedBadge size="sm" />}
                             <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {new Date(post.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} | {new Date(post.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}
+                              {(() => {
+                                const diff = Date.now() - new Date(post.created_at).getTime();
+                                const mins = Math.floor(diff / 60000);
+                                if (mins < 1) return "just now";
+                                if (mins < 60) return `${mins} minutes ago`;
+                                const hrs = Math.floor(mins / 60);
+                                if (hrs < 24) return `${hrs} hours ago`;
+                                const days = Math.floor(hrs / 24);
+                                return `${days} days ago`;
+                              })()}
                             </span>
                           </div>
                           {post.content && (
-                            <p className="text-sm text-gray-900 dark:text-gray-100 mt-1 whitespace-pre-wrap break-words">
+                            <p className="text-sm text-gray-900 dark:text-gray-100 mt-1.5 whitespace-pre-wrap break-words">
                               {post.content}
                             </p>
                           )}
@@ -357,16 +368,38 @@ const HomePage = () => {
 
                       {/* Post Image */}
                       {post.image_url && (
-                        <div className="mt-2 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-                          <img src={post.image_url} alt="Post image" className="max-w-full max-h-80 object-contain" />
+                        <div className="mt-3 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                          <img src={post.image_url} alt="Post image" className="max-w-full max-h-96 object-contain" />
                         </div>
                       )}
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                        <button
+                          onClick={async () => {
+                            const res = await feedApi.toggleLike(post.id);
+                            if (res.success) {
+                              setFeedPosts(feedPosts.map((p: any) =>
+                                p.id === post.id
+                                  ? { ...p, likes: (res.data as any)?.liked ? p.likes + 1 : Math.max(0, p.likes - 1), liked_by_me: (res.data as any)?.liked }
+                                  : p
+                              ));
+                            }
+                          }}
+                          className={`flex items-center gap-1 text-xs font-medium transition-colors ${post.liked_by_me ? 'text-red-500' : 'text-gray-500 dark:text-gray-400 hover:text-red-500'}`}
+                        >
+                          ♥ {post.likes || 0}
+                        </button>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          💬 {post.comment_count || 0}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  <p className="text-sm">No posts yet. Join groups and start posting!</p>
+                  <p className="text-sm">No posts yet. Be the first to share something!</p>
                 </div>
               )}
             </section>

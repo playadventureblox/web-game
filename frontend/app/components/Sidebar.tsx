@@ -197,15 +197,6 @@ export default function Sidebar({
                 <span className="font-medium text-sm">Inventory</span>
               </Link>
 
-              <Link
-                href="/trade"
-                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-                onClick={onClose}
-              >
-                <TrendingUp className="w-4 h-4" />
-                <span className="font-medium text-sm">Trade</span>
-              </Link>
-
               <button
                 onClick={async () => {
                   try {

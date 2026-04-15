@@ -1100,6 +1100,7 @@ export const groupsApi = {
   updateGroupShout: async (
     id: string,
     shoutText: string,
+    shoutImageUrl?: string,
   ): Promise<ApiResponse<{ shout: unknown }>> => {
     const token = storage.getAccessToken();
     if (!token) {
@@ -1114,7 +1115,7 @@ export const groupsApi = {
       headers: {
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ shoutText }),
+      body: JSON.stringify({ shoutText, shoutImageUrl }),
     });
   },
 
@@ -1951,5 +1952,57 @@ export const catalogApi = {
     return apiCall<{
       subcategories: Array<{ subcategory: string; itemCount: string }>;
     }>(`/catalog/subcategories/${encodeURIComponent(category)}`);
+  },
+};
+
+// Feed API (Homepage wall)
+export const feedApi = {
+  getPosts: async (limit = 20, offset = 0): Promise<ApiResponse<{ posts: unknown[] }>> => {
+    const token = storage.getAccessToken();
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return apiCall(`/feed?limit=${limit}&offset=${offset}`, { method: "GET", headers });
+  },
+
+  createPost: async (data: { content?: string; imageUrl?: string }): Promise<ApiResponse<{ post: unknown }>> => {
+    const token = storage.getAccessToken();
+    if (!token) return { success: false, error: "No authentication token found" };
+    return apiCall("/feed", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+  },
+
+  deletePost: async (id: string): Promise<ApiResponse> => {
+    const token = storage.getAccessToken();
+    if (!token) return { success: false, error: "No authentication token found" };
+    return apiCall(`/feed/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  },
+
+  toggleLike: async (id: string): Promise<ApiResponse<{ liked: boolean }>> => {
+    const token = storage.getAccessToken();
+    if (!token) return { success: false, error: "No authentication token found" };
+    return apiCall(`/feed/${id}/like`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  },
+
+  getComments: async (id: string): Promise<ApiResponse<{ comments: unknown[] }>> => {
+    return apiCall(`/feed/${id}/comments`, { method: "GET" });
+  },
+
+  createComment: async (id: string, content: string): Promise<ApiResponse<{ comment: unknown }>> => {
+    const token = storage.getAccessToken();
+    if (!token) return { success: false, error: "No authentication token found" };
+    return apiCall(`/feed/${id}/comments`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ content }),
+    });
   },
 };

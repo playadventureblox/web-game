@@ -2495,7 +2495,7 @@ export const updateGroupShout = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId;
     const { id } = req.params;
-    const { shoutText } = req.body;
+    const { shoutText, shoutImageUrl } = req.body;
 
     if (!userId) {
       return res.status(401).json({
@@ -2525,15 +2525,17 @@ export const updateGroupShout = async (req: AuthRequest, res: Response) => {
     const updateResult = await db.query(
       `UPDATE groups 
        SET "shoutText" = $1, 
+           "shoutImageUrl" = $2,
            "shoutPostedAt" = NOW(), 
-           "shoutPostedBy" = $2,
+           "shoutPostedBy" = $3,
            "updatedAt" = NOW()
-       WHERE id = $3
+       WHERE id = $4
        RETURNING 
          "shoutText" as shout_text,
+         "shoutImageUrl" as shout_image_url,
          "shoutPostedAt" as shout_posted_at,
          "shoutPostedBy" as shout_posted_by`,
-      [shoutText || null, userId, groupId],
+      [shoutText || null, shoutImageUrl || null, userId, groupId],
     );
 
     return res.status(200).json({

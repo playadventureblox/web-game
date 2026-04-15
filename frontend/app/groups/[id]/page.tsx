@@ -69,6 +69,8 @@ const GroupDetailPage = () => {
   const [groupMenuOpen, setGroupMenuOpen] = useState(false);
   const [newPost, setNewPost] = useState("");
   const [shoutText, setShoutText] = useState("");
+  const [shoutImage, setShoutImage] = useState<File | null>(null);
+  const [shoutImagePreview, setShoutImagePreview] = useState<string | null>(null);
   const [groupSearch, setGroupSearch] = useState("");
   const [openPostMenu, setOpenPostMenu] = useState<string | null>(null);
   const [userGroups, setUserGroups] = useState<Group[]>([]);
@@ -422,12 +424,22 @@ const GroupDetailPage = () => {
 
   // Handle shout submission
   const handleShoutSubmit = async () => {
-    if (!shoutText.trim() || !groupId) return;
+    if ((!shoutText.trim() && !shoutImage) || !groupId) return;
 
     try {
+      let imageUrl: string | undefined;
+      if (shoutImage) {
+        const uploadResponse = await uploadApi.uploadImage(shoutImage, 'shout');
+        if (uploadResponse.success && uploadResponse.data) {
+          imageUrl = (uploadResponse.data as { url: string }).url;
+        } else {
+          alert("Failed to upload image"); return;
+        }
+      }
       const response = await groupsApi.updateGroupShout(
         groupId,
         shoutText.trim(),
+        imageUrl,
       );
       if (response.success) {
         // Refresh group details to show new shout
@@ -436,6 +448,9 @@ const GroupDetailPage = () => {
           setCurrentGroupDetails(groupResponse.data.group as Group);
         }
         setShoutText("");
+        setShoutImage(null);
+        if (shoutImagePreview) URL.revokeObjectURL(shoutImagePreview);
+        setShoutImagePreview(null);
         setSuccessMessage({
           title: "Success",
           message: "Shout posted successfully!",
@@ -988,6 +1003,13 @@ const GroupDetailPage = () => {
                           {currentGroup.shout_text}
                         </p>
                         
+                        {/* Shout Image */}
+                        {currentGroup.shout_image_url && (
+                          <div className="mt-2 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600">
+                            <img src={currentGroup.shout_image_url} alt="Shout image" className="max-w-full max-h-64 object-contain" />
+                          </div>
+                        )}
+                        
                         {/* Timestamp */}
                         {currentGroup.shout_posted_at && (
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
@@ -1022,13 +1044,42 @@ const GroupDetailPage = () => {
                       rows={3}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                     />
+                    {shoutImagePreview && (
+                      <div className="relative inline-block">
+                        <img src={shoutImagePreview} alt="Preview" className="max-h-32 rounded border border-gray-300 dark:border-gray-600" />
+                        <button
+                          onClick={() => { setShoutImage(null); if (shoutImagePreview) URL.revokeObjectURL(shoutImagePreview); setShoutImagePreview(null); }}
+                          className="absolute -top-2 -right-2 p-0.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {shoutText.length}/1000 characters
-                      </p>
+                      <div className="flex items-center gap-3">
+                        <label className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer transition-colors" title="Attach image">
+                          <ImagePlus className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              if (file.size > 5 * 1024 * 1024) { alert("Image must be under 5MB"); return; }
+                              setShoutImage(file);
+                              if (shoutImagePreview) URL.revokeObjectURL(shoutImagePreview);
+                              setShoutImagePreview(URL.createObjectURL(file));
+                            }}
+                            className="hidden"
+                          />
+                        </label>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {shoutText.length}/1000 characters
+                        </p>
+                      </div>
                       <button
                         onClick={handleShoutSubmit}
-                        disabled={!shoutText.trim()}
+                        disabled={!shoutText.trim() && !shoutImage}
                         className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Group Shout
@@ -1066,36 +1117,14 @@ const GroupDetailPage = () => {
                       rows={2}
                       className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                     />
-                    <div className="flex flex-col gap-1">
-                      <label className="p-2 h-fit hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer transition-colors" title="Attach image">
-                        <ImagePlus className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handlePostImageSelect}
-                          className="hidden"
-                        />
-                      </label>
-                      <button
-                        onClick={handlePostSubmit}
-                        disabled={(!newPost.trim() && !postImage) || postingWall}
-                        className="px-4 py-2 h-fit bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {uploadingImage ? "Uploading..." : postingWall ? "Posting..." : "Post"}
-                      </button>
-                    </div>
+                    <button
+                      onClick={handlePostSubmit}
+                      disabled={!newPost.trim() || postingWall}
+                      className="px-4 py-2 h-fit bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {postingWall ? "Posting..." : "Post"}
+                    </button>
                   </div>
-                  {postImagePreview && (
-                    <div className="mt-2 relative inline-block">
-                      <img src={postImagePreview} alt="Preview" className="max-h-32 rounded border border-gray-300 dark:border-gray-600" />
-                      <button
-                        onClick={handleRemovePostImage}
-                        className="absolute -top-2 -right-2 p-0.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
                 </div>
 
                 {wallPosts.length > 0 ? (
@@ -1178,17 +1207,6 @@ const GroupDetailPage = () => {
                           <p className="text-sm text-gray-900 dark:text-gray-100 mb-3 whitespace-pre-wrap break-words">
                             {post.content}
                           </p>
-                        )}
-
-                        {/* Post Image */}
-                        {post.image_url && (
-                          <div className="mb-3 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-                            <img
-                              src={post.image_url}
-                              alt="Post image"
-                              className="max-w-full max-h-96 object-contain"
-                            />
-                          </div>
                         )}
 
                         {/* Post Actions */}

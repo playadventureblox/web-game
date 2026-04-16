@@ -11,17 +11,31 @@ const ProfilePage = () => {
   useEffect(() => {
     const redirect = async () => {
       try {
-        const response = await usersApi.getCurrentUser();
+        let response = await usersApi.getCurrentUser();
+
+        // If first attempt fails, retry once (token refresh race condition)
+        if (!response.success || !response.data) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          response = await usersApi.getCurrentUser();
+        }
+
         if (response.success && response.data) {
           const user: any = response.data.user;
           router.replace(`/profile/${user.username}`);
         } else {
-          // If not logged in, redirect to login
-          router.replace("/login");
+          // Only redirect to login if there's no token at all
+          const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+          if (!token) {
+            router.replace("/login");
+          }
+          // If token exists but API failed, stay on loading — don't redirect
         }
       } catch (error) {
         console.error("Error fetching user:", error);
-        router.replace("/login");
+        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+        if (!token) {
+          router.replace("/login");
+        }
       }
     };
     redirect();

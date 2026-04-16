@@ -7,7 +7,6 @@ import { ChevronRight, Plus, Loader2, ImagePlus, X } from "lucide-react";
 import Footer from "../components/Footer";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
-import ProtectedRoute from "../components/ProtectedRoute";
 import VerifiedBadge from "../components/VerifiedBadge";
 import { usersApi, friendsApi, feedApi, uploadApi } from "@/lib/api";
 import { useRealtime } from "@/contexts/RealtimeContext";
@@ -20,7 +19,6 @@ const HomePage = () => {
   const [user, setUser] = useState<any>(null);
   const [friends, setFriends] = useState<any[]>([]);
   const [feedPosts, setFeedPosts] = useState<any[]>([]);
-  const [loadingFeed, setLoadingFeed] = useState(true);
   const [feedPostText, setFeedPostText] = useState("");
   const [feedPostImage, setFeedPostImage] = useState<File | null>(null);
   const [feedPostImagePreview, setFeedPostImagePreview] = useState<string | null>(null);
@@ -57,7 +55,7 @@ const HomePage = () => {
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
-        setLoadingFeed(false);
+        // done
       }
     };
     fetchData();
@@ -109,7 +107,6 @@ const HomePage = () => {
 
 
   return (
-    <ProtectedRoute>
       <div className="min-h-screen bg-white dark:bg-gray-900">
         {/* Header */}
         <Header
@@ -314,11 +311,7 @@ const HomePage = () => {
               </div>
 
               {/* Feed Posts */}
-              {loadingFeed ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-                </div>
-              ) : feedPosts.length > 0 ? (
+              {feedPosts.length > 0 ? (
                 <div className="space-y-4">
                   {feedPosts.map((post: any) => (
                     <div
@@ -438,7 +431,6 @@ const HomePage = () => {
         {/* Sidebar Overlay */}
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       </div>
-    </ProtectedRoute>
   );
 };
 

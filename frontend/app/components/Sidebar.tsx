@@ -62,14 +62,9 @@ export default function Sidebar({
 
   if (!isOpen) return null;
 
-  // Show loading or fallback if user data not loaded yet
   const isLoggedIn = isAuthenticated();
-  const displayUsername =
-    user?.username ?? (isLoggedIn ? "Loading..." : "Guest");
-  const displayName =
-    user?.display_name ??
-    user?.username ??
-    (isLoggedIn ? "Loading..." : "Guest");
+  const displayUsername = user?.username ?? "";
+  const displayName = user?.display_name ?? user?.username ?? "";
   const userIsVerified = user?.is_verified ?? isVerified;
 
   return (

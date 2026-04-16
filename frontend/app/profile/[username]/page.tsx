@@ -87,74 +87,66 @@ const ProfilePage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch current logged-in user
-        const currentUserResponse = await usersApi.getCurrentUser();
-        if (currentUserResponse.success && currentUserResponse.data) {
-          const currentUserData = currentUserResponse.data.user as any;
-          setCurrentUser(currentUserData);
-          
-          // Check if viewing own profile
-          const isOwn = currentUserData.username === profileUsername;
-          setIsOwnProfile(isOwn);
-          
-          if (isOwn) {
-            // If own profile, use current user data
-            setProfileUser(currentUserData);
-            setDisplayName(currentUserData.display_name || currentUserData.username);
-            setUsername(currentUserData.username);
-            setEditedDisplayName(currentUserData.display_name || currentUserData.username);
-            setEditedUsername(currentUserData.username);
-            setBio(currentUserData.bio || "");
-            setEditedBio(currentUserData.bio || "");
-            if (currentUserData.status_message) {
-              setStatusMessage(currentUserData.status_message);
-              setEditedStatusMessage(currentUserData.status_message);
-            }
-            // Clear relationship for own profile
-            setRelationship(null);
-          } else {
-            // Fetch other user's profile AND relationship in parallel
-            const [profileResponse, relationshipResponse] = await Promise.all([
-              usersApi.getUserByUsername(profileUsername),
-              usersApi.getUserByUsername(profileUsername).then(async (res) => {
-                if (res.success && res.data) {
-                  const userData = res.data as any;
-                  if (userData.user?.id) {
-                    return usersApi.getRelationship(userData.user.id);
-                  }
-                }
-                return { success: false, data: null };
-              })
-            ]);
+        // Fetch profile AND current user in parallel — independent of each other
+        const [profileResponse, currentUserResponse] = await Promise.all([
+          usersApi.getUserByUsername(profileUsername),
+          usersApi.getCurrentUser(),
+        ]);
 
-            if (profileResponse.success && profileResponse.data) {
-              const profileData = profileResponse.data as any;
-              setProfileUser(profileData.user);
-              setDisplayName(profileData.user.display_name || profileData.user.username);
-              setUsername(profileData.user.username);
-              setBio(profileData.user.bio || "");
-              if (profileData.user.status_message) {
-                setStatusMessage(profileData.user.status_message);
-              }
-              
-              // Set relationship status immediately
-              if (relationshipResponse.success && relationshipResponse.data) {
-                setRelationship(relationshipResponse.data as any);
+        // Set profile data (always — this is the page we're viewing)
+        let viewedUser: any = null;
+        if (profileResponse.success && profileResponse.data) {
+          const profileData = profileResponse.data as any;
+          viewedUser = profileData.user;
+        }
+
+        // Set current user data
+        let currentUserData: any = null;
+        if (currentUserResponse.success && currentUserResponse.data) {
+          currentUserData = currentUserResponse.data.user as any;
+          setCurrentUser(currentUserData);
+        }
+
+        // Determine if viewing own profile
+        const isOwn = !!(currentUserData && currentUserData.username === profileUsername);
+        setIsOwnProfile(isOwn);
+
+        if (isOwn && currentUserData) {
+          // Own profile — use the richer current user data
+          setProfileUser(currentUserData);
+          setDisplayName(currentUserData.display_name || currentUserData.username);
+          setUsername(currentUserData.username);
+          setEditedDisplayName(currentUserData.display_name || currentUserData.username);
+          setEditedUsername(currentUserData.username);
+          setBio(currentUserData.bio || "");
+          setEditedBio(currentUserData.bio || "");
+          if (currentUserData.status_message) {
+            setStatusMessage(currentUserData.status_message);
+            setEditedStatusMessage(currentUserData.status_message);
+          }
+          setRelationship(null);
+        } else if (viewedUser) {
+          // Other user's profile
+          setProfileUser(viewedUser);
+          setDisplayName(viewedUser.display_name || viewedUser.username);
+          setUsername(viewedUser.username);
+          setBio(viewedUser.bio || "");
+          if (viewedUser.status_message) {
+            setStatusMessage(viewedUser.status_message);
+          }
+
+          // Fetch relationship if logged in
+          if (currentUserData && viewedUser.id) {
+            try {
+              const relResponse = await usersApi.getRelationship(viewedUser.id);
+              if (relResponse.success && relResponse.data) {
+                setRelationship(relResponse.data as any);
               } else {
-                // No relationship data, set default
-                setRelationship({
-                  isFriend: false,
-                  friendRequestStatus: null,
-                  isFollowing: false,
-                  isBestFriend: false,
-                  isBlocked: false
-                });
+                setRelationship({ isFriend: false, friendRequestStatus: null, isFollowing: false, isBestFriend: false, isBlocked: false });
               }
-            }
+            } catch { /* ignore */ }
           }
         }
-        
-        // Note: Friends list will be fetched separately after profileUser is set
       } catch (error) {
         console.error("Error fetching data:", error);
       }

@@ -241,17 +241,6 @@ export default function Sidebar({
               </Link>
             </div>
 
-            <nav className="py-1">
-              <Link
-                href="/gift-cards"
-                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-                onClick={onClose}
-              >
-                <Gift className="w-4 h-4" />
-                <span className="font-medium text-sm">Buy Gift Cards</span>
-              </Link>
-            </nav>
-
             {/* Get Membership Button */}
             <div className="px-4 py-3">
               <Link

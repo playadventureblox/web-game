@@ -42,6 +42,7 @@ export const getProfile = async (req: Request, res: Response) => {
         u.bio,
         u."statusMessage" as status_message,
         u."avatarUrl" as avatar_url,
+        u.primary_group_id,
         p."profileTheme" as profile_theme,
         p."profileVisibility" as profile_visibility,
         p."canReceiveFriendRequests" as can_receive_friend_requests,

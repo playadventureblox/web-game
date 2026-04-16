@@ -1442,7 +1442,7 @@ const ProfilePage = () => {
                 {/* Landscape View - Single card with icon left, info right, arrows */}
                 {groupsViewMode === "carousel" && groups.length > 0 && (
                   <div className="relative border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
-                    <div className="flex h-[180px]">
+                    <div className="flex h-[260px]">
                       {/* Left Arrow - overlaid on image */}
                       {currentGroupIndex > 0 && (
                         <button
@@ -1454,7 +1454,7 @@ const ProfilePage = () => {
                       )}
 
                       {/* Group Icon - Left half */}
-                      <Link href={`/groups/${groups[currentGroupIndex]?.id}`} className="w-[180px] h-full flex-shrink-0 bg-blue-500 dark:bg-gray-700 relative block">
+                      <Link href={`/groups/${groups[currentGroupIndex]?.id}`} className="w-[260px] h-full flex-shrink-0 bg-blue-500 dark:bg-gray-700 relative block">
                         <Image
                           src={groups[currentGroupIndex]?.image || `https://robohash.org/${groups[currentGroupIndex]?.name}?set=set3`}
                           alt={groups[currentGroupIndex]?.name || ""}

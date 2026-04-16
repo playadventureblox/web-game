@@ -22,16 +22,12 @@ export const getCurrentUser = async () => {
       return response.data.user;
     }
 
-    // If token is invalid, clear it
-    if (response.error || !response.success) {
-      storage.clearTokens();
-    }
-
+    // Don't clear tokens here - apiCall already handles 401 with silent refresh
+    // Only return null, let the caller decide what to do
     return null;
   } catch (error) {
     console.error("Error fetching current user:", error);
-    // Clear invalid tokens
-    storage.clearTokens();
+    // Don't clear tokens on network errors - could be a temporary issue
     return null;
   }
 };
@@ -95,10 +91,14 @@ export const redirectIfAuthenticated = (): boolean => {
  */
 export const verifyToken = async (): Promise<boolean> => {
   try {
+    // First check if token exists at all
+    const token = storage.getAccessToken();
+    if (!token) return false;
+
     const user = await getCurrentUser();
     return !!user;
   } catch {
-    storage.clearTokens();
+    // Don't clear tokens on catch - could be network issue
     return false;
   }
 };

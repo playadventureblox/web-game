@@ -1645,9 +1645,10 @@ const GroupDetailPage = () => {
         isOpen={showLeaveConfirm}
         onClose={() => setShowLeaveConfirm(false)}
         onConfirm={async () => {
-          if (groupId) {
+          const groupUuid = currentGroupDetails?.id || groupId;
+          if (groupUuid) {
             setActionLoading(true);
-            const response = await groupsApi.leaveGroup(groupId);
+            const response = await groupsApi.leaveGroup(groupUuid);
             setActionLoading(false);
             setShowLeaveConfirm(false);
             if (response.success) {

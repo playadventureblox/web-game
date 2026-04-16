@@ -23,11 +23,27 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
         return;
       }
 
-      const isValid = await verifyToken();
+      // Token exists — try to verify. If first attempt fails, retry once
+      // (handles race conditions with token refresh)
+      let isValid = await verifyToken();
 
       if (!isValid) {
-        storage.clearTokens();
-        router.push("/login");
+        // Wait a moment and retry — silent refresh may be in progress
+        await new Promise(resolve => setTimeout(resolve, 500));
+        isValid = await verifyToken();
+      }
+
+      if (!isValid) {
+        // Double-check token still doesn't exist (refresh may have cleared it)
+        const tokenAfterRetry = storage.getAccessToken();
+        if (!tokenAfterRetry) {
+          router.push("/login");
+        } else {
+          // Token exists but verify failed — likely a temporary API issue
+          // Show content anyway rather than blocking user
+          setIsAuthorized(true);
+          setIsLoading(false);
+        }
       } else {
         setIsAuthorized(true);
         setIsLoading(false);

@@ -42,7 +42,6 @@ const SettingsPage = () => {
   // Fetch user data from API
   useEffect(() => {
     const fetchUserData = async () => {
-      setLoading(true);
       try {
         const response = await usersApi.getCurrentUser();
         if (response.success && response.data) {
@@ -50,12 +49,9 @@ const SettingsPage = () => {
           setUser(userData);
           setDisplayName(userData.display_name || userData.username || "");
           setSelectedGender(userData.gender || "");
-        } else {
-          setErrorMessage("Failed to load user data");
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
-        setErrorMessage("Error loading user data");
       } finally {
         setLoading(false);
       }
@@ -200,11 +196,6 @@ const SettingsPage = () => {
                   Account Info
                 </h2>
 
-                {loading ? (
-                  <div className="text-center py-8 text-gray-600 dark:text-gray-400">
-                    Loading...
-                  </div>
-                ) : (
                   <>
                     {/* Display Name */}
                     <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
@@ -541,7 +532,6 @@ const SettingsPage = () => {
                       </div>
                     </div>
                   </>
-                )}
               </div>
             )}
 

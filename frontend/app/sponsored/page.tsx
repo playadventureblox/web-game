@@ -14,7 +14,7 @@ const SponsoredPage = () => {
 
   // Placeholder game data
   const games = [
-    { id: 1, title: "PLS DONATE 💸", rating: "93% Rating", sponsor: "Hazem" },
+    { id: 1, title: "PLS DONATE 💸", rating: "93% Rating", sponsor: "Haz3m" },
     { id: 2, title: "Teamwork Puzzles 2 (Obby)", rating: "92% Rating", sponsor: "GameStudio" },
     { id: 3, title: "Murderers vs Sheriffs 2", rating: "87% Rating", sponsor: "VortexGames" },
     { id: 4, title: "[WINTER] Dragon Soul", rating: "94% Rating", sponsor: "DragonDev" },

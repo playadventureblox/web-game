@@ -1,6 +1,6 @@
 #AdventureBlox Backend API
 
-Backend server for AdventureBlox platform built with Node.js, Express, TypeScript, and Prisma.
+Backend server for AdventureBlox built with Node.js, Express, TypeScript, and Prisma.
 
 ## 🚀 Tech Stack
 

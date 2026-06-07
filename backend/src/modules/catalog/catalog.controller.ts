@@ -23,6 +23,9 @@ export const getCatalogItems = async (req: Request, res: Response) => {
     let params: any[] = [];
     let paramIndex = 1;
 
+    // Always exclude Rthro heads
+    whereConditions.push(`subcategory != 'Heads'`);
+
     // Category filter
     if (category && category !== "All") {
       whereConditions.push(`category = $${paramIndex}`);
@@ -168,7 +171,7 @@ export const getCatalogCategories = async (_req: Request, res: Response) => {
     const result = await pool.query(`
       SELECT category, COUNT(*) as "itemCount"
       FROM catalog_items
-      WHERE "isAvailable" = true
+      WHERE "isAvailable" = true AND subcategory != 'Heads'
       GROUP BY category
       ORDER BY category
     `);
@@ -194,7 +197,7 @@ export const getCatalogSubcategories = async (req: Request, res: Response) => {
     const result = await pool.query(
       `SELECT subcategory, COUNT(*) as "itemCount"
        FROM catalog_items
-       WHERE category = $1 AND "isAvailable" = true AND subcategory IS NOT NULL
+       WHERE category = $1 AND "isAvailable" = true AND subcategory IS NOT NULL AND subcategory != 'Heads'
        GROUP BY subcategory
        ORDER BY subcategory`,
       [category]

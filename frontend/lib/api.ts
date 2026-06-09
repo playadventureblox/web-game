@@ -1174,6 +1174,25 @@ export const groupsApi = {
     });
   },
 
+deleteGroupWallPost: async (
+    groupId: string,
+    postId: string,
+  ): Promise<ApiResponse> => {
+    const token = storage.getAccessToken();
+    if (!token) {
+      return {
+        success: false,
+        error: "No authentication token found",
+      };
+    }
+    return apiCall(`/groups/${groupId}/wall/${postId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
   // Get join requests for a group
   getJoinRequests: async (
     id: string,

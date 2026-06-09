@@ -11,6 +11,7 @@ import {
   searchGroups,
   getGroupWallPosts,
   createGroupWallPost,
+  deleteGroupWallPost,
   getWallPostReplies,
   createWallPostReply,
   deleteWallPostReply,
@@ -87,6 +88,7 @@ router.post("/:id/join-requests/:requestId/accept", authMiddleware, acceptJoinRe
 router.post("/:id/join-requests/:requestId/reject", authMiddleware, rejectJoinRequest);
 router.post("/:id/leave", authMiddleware, leaveGroupEnhanced);
 router.post("/:id/wall", authMiddleware, createGroupWallPost);
+router.delete("/:id/wall/:postId", authMiddleware, deleteGroupWallPost);
 router.post("/:id/wall/:postId/replies", authMiddleware, createWallPostReply);
 router.delete("/:id/wall/:postId/replies/:replyId", authMiddleware, deleteWallPostReply);
 router.put("/:id/settings", authMiddleware, updateGroupSettings);

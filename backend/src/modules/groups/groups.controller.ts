@@ -2676,3 +2676,74 @@ export const getMyGroupFeed = async (req: AuthRequest, res: Response) => {
     });
   }
 };
+/**
+ * @route   DELETE /api/v1/groups/:id/wall/:postId
+ * @desc    Delete a wall post (post author or group owner only)
+ * @access  Private
+ */
+export const deleteGroupWallPost = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { id, postId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const groupId = await resolveGroupId(id);
+    if (!groupId) {
+      return res.status(404).json({ success: false, message: "Group not found" });
+    }
+
+    const postCheck = await db.query(
+      `SELECT "authorId" FROM group_wall_posts WHERE id = $1 AND "groupId" = $2`,
+      [postId, groupId]
+    );
+
+    if (postCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Wall post not found",
+      });
+    }
+
+    const groupResult = await db.query(
+      `SELECT "ownerId" FROM groups WHERE id = $1`,
+      [groupId]
+    );
+
+    const isAuthor = postCheck.rows[0].authorId === userId;
+    const isOwner = groupResult.rows[0].ownerId === userId;
+
+    if (!isAuthor && !isOwner) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only delete your own posts or posts in your group",
+      });
+    }
+
+    await db.query(
+      `DELETE FROM group_wall_post_replies WHERE "postId" = $1`,
+      [postId]
+    );
+
+    await db.query(
+      `DELETE FROM group_wall_posts WHERE id = $1`,
+      [postId]
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Wall post deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete wall post error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};

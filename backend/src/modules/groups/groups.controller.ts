@@ -280,7 +280,7 @@ export const getGroupById = async (req: Request, res: Response) => {
         g."coverPhotoUrl" as cover_photo_url,
         g."ownerId" as owner_id,
         g."joinSetting" as join_setting,
-        g."memberCount" as member_count,
+        (SELECT COUNT(*) FROM group_members gm WHERE gm."groupId" = g.id)::int as member_count,
         g."isVerified" as is_verified,
         g."shoutText" as shout_text,
         g."shoutImageUrl" as shout_image_url,

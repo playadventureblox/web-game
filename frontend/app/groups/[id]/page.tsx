@@ -1176,16 +1176,40 @@ const GroupDetailPage = () => {
                                   onClick={() => setOpenPostMenu(null)}
                                 />
                                 <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-20 py-1">
-                                  <button
-                                    onClick={() => {
-                                      setShowReportModal(true);
-                                      setOpenPostMenu(null);
-                                    }}
-                                    className="w-full px-3 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                                  >
-                                    Report Abuse
-                                  </button>
-                                </div>
+  {(post.author_id === currentUserId || currentGroupDetails?.owner_id === currentUserId) && (
+    <>
+      <button
+        onClick={async () => {
+          setOpenPostMenu(null);
+          if (!confirm("Are you sure you want to delete this post?")) return;
+          try {
+            const groupUuid = currentGroupDetails?.id;
+            if (!groupUuid) return;
+            const response = await groupsApi.deleteGroupWallPost(groupUuid, post.id);
+            if (response.success) {
+              setWallPosts(wallPosts.filter(p => p.id !== post.id));
+            }
+          } catch (error) {
+            console.error("Error deleting post:", error);
+          }
+        }}
+        className="w-full px-3 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+      >
+        Delete Post
+      </button>
+      <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+    </>
+  )}
+  <button
+    onClick={() => {
+      setShowReportModal(true);
+      setOpenPostMenu(null);
+    }}
+    className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+  >
+    Report Abuse
+  </button>
+</div>
                               </>
                             )}
                           </div>

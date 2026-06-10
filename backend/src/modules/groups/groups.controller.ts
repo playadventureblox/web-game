@@ -1249,7 +1249,7 @@ export const getUserGroups = async (req: AuthRequest, res: Response) => {
         g."iconUrl" as icon_url,
         g."coverPhotoUrl" as cover_photo_url,
         g."ownerId" as owner_id,
-        g."memberCount" as member_count,
+        (SELECT COUNT(*) FROM group_members gm2 WHERE gm2."groupId" = g.id)::int as member_count,
         g."isVerified" as is_verified,
         g."createdAt" as created_at,
         gr.name as role

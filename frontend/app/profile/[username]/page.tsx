@@ -213,7 +213,7 @@ const ProfilePage = () => {
           const userGroups = await Promise.all(rawGroups.map(async (group: any) => {
             try {
               const detailRes = await groupsApi.getGroupById(group.id);
-              const realCount = detailRes.success ? detailRes.data?.group?.member_count : group.member_count;
+              const realCount = detailRes.success ? (detailRes.data?.group as any)?.member_count : group.member_count;
               return {
                 id: group.id,
                 name: group.name,

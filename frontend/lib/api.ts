@@ -196,6 +196,8 @@ export const usersApi = {
     displayName?: string;
     bio?: string;
     status?: string;
+    email?: string;
+    socialVisibility?: string;
   }): Promise<ApiResponse<unknown>> => {
     const token = storage.getAccessToken();
     if (!token) {

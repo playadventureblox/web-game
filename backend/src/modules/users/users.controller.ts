@@ -173,7 +173,7 @@ export const updateProfile = async (req: Request, res: Response) => {
       });
     }
 
-    const { displayName, username, bio, status, statusMessage } = req.body;
+    const { displayName, username, bio, status, statusMessage, email, socialVisibility } = req.body;
 
     // Validate displayName if provided
     if (displayName) {
@@ -267,6 +267,28 @@ export const updateProfile = async (req: Request, res: Response) => {
     if (bio !== undefined) {
       userUpdates.push(`bio = $${userParamIndex}`);
       userValues.push(bio);
+      userParamIndex++;
+    }
+
+    if (email !== undefined) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ success: false, message: "Invalid email address" });
+      }
+      const existingEmail = await db.query(
+        'SELECT id FROM users WHERE email = $1 AND id != $2',
+        [email, userId]
+      );
+      if (existingEmail.rows.length > 0) {
+        return res.status(400).json({ success: false, message: "Email is already in use" });
+      }
+      userUpdates.push(`email = $${userParamIndex}`);
+      userValues.push(email);
+      userParamIndex++;
+    }
+
+    if (socialVisibility !== undefined) {
+      userUpdates.push(`"socialVisibility" = $${userParamIndex}`);
+      userValues.push(socialVisibility);
       userParamIndex++;
     }
 

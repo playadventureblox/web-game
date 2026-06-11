@@ -142,6 +142,7 @@ const GroupDetailPage = () => {
   useEffect(() => {
     const fetchUserGroups = async () => {
       setLoadingGroups(true);
+      setUserGroups([]); // Clear stale data first
       try {
         const [groupsResponse, profileResponse] = await Promise.all([
           groupsApi.getUserGroups(),

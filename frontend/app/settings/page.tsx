@@ -38,6 +38,11 @@ const SettingsPage = () => {
   const [twitch, setTwitch] = useState("");
   const [socialVisibility, setSocialVisibility] = useState("no-one");
 
+  // Email editing state
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [savingEmail, setSavingEmail] = useState(false);
+
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -47,6 +52,7 @@ const SettingsPage = () => {
           setUser(userData);
           setDisplayName(userData.display_name || userData.username || "");
           setSelectedGender(userData.gender || "");
+          setNewEmail(userData.email || "");
         }
 
         const socialResponse = await usersApi.getMySocialLinks();
@@ -99,6 +105,34 @@ const SettingsPage = () => {
     }
   };
 
+  const handleSaveEmail = async () => {
+    if (!newEmail.trim()) { setErrorMessage("Email cannot be empty"); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) { setErrorMessage("Please enter a valid email address"); return; }
+
+    setSavingEmail(true);
+    setSuccessMessage("");
+    setErrorMessage("");
+
+    try {
+      const response = await usersApi.updateProfile({ email: newEmail.trim() });
+      if (response.success) {
+        const refreshResponse = await usersApi.getCurrentUser();
+        if (refreshResponse.success && refreshResponse.data) {
+          setUser(refreshResponse.data.user as UserData);
+        }
+        setIsEditingEmail(false);
+        setSuccessMessage("Email updated successfully!");
+        setTimeout(() => setSuccessMessage(""), 3000);
+      } else {
+        setErrorMessage(response.message || "Failed to update email");
+      }
+    } catch (error) {
+      setErrorMessage("Failed to update email");
+    } finally {
+      setSavingEmail(false);
+    }
+  };
+
   const handleSaveSocialNetworks = async () => {
     setSaving(true);
     setSuccessMessage("");
@@ -121,6 +155,9 @@ const SettingsPage = () => {
           await usersApi.upsertSocialLink(social.platform, url);
         }
       }
+
+      // Save social visibility
+      await usersApi.updateProfile({ socialVisibility });
 
       const refreshResponse = await usersApi.getCurrentUser();
       if (refreshResponse.success && refreshResponse.data) {
@@ -230,23 +267,55 @@ const SettingsPage = () => {
                 {/* Email */}
                 <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
                   <div className="flex justify-between items-start">
-                    <div>
+                    <div className="flex-1">
                       <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Email:</div>
-                      <div className="text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                        {user?.email || "Not set"}
-                        {user?.is_verified && (
-                          <span className="inline-flex items-center gap-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
-                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
-                            Verified
-                          </span>
-                        )}
-                      </div>
+                      {isEditingEmail ? (
+                        <div className="space-y-2">
+                          <input
+                            type="email"
+                            value={newEmail}
+                            onChange={(e) => setNewEmail(e.target.value)}
+                            className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
+                            placeholder="Enter email address"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={handleSaveEmail}
+                              disabled={savingEmail}
+                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded disabled:opacity-50"
+                            >
+                              {savingEmail ? "Saving..." : "Save Email"}
+                            </button>
+                            <button
+                              onClick={() => { setIsEditingEmail(false); setNewEmail(user?.email || ""); setErrorMessage(""); }}
+                              className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 text-sm font-medium rounded"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                          {user?.email || "Not set"}
+                          {user?.is_verified && (
+                            <span className="inline-flex items-center gap-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
+                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              </svg>
+                              Verified
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <button className="text-blue-600 dark:text-blue-400 p-1">
-                      <ExternalLink className="w-4 h-4" />
-                    </button>
+                    {!isEditingEmail && (
+                      <button
+                        onClick={() => setIsEditingEmail(true)}
+                        className="text-blue-600 dark:text-blue-400 p-1 hover:opacity-80"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -352,15 +421,7 @@ const SettingsPage = () => {
                     ))}
                   </div>
 
-                  <button
-                    onClick={handleSaveSocialNetworks}
-                    disabled={saving}
-                    className="px-4 py-2 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 font-semibold rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {saving ? "Saving..." : "Save Social Networks"}
-                  </button>
-
-                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 mb-4">
                     <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Social networks visibility</h4>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">Who can see links to your social network profiles</p>
                     <div className="space-y-2">
@@ -385,6 +446,14 @@ const SettingsPage = () => {
                       ))}
                     </div>
                   </div>
+
+                  <button
+                    onClick={handleSaveSocialNetworks}
+                    disabled={saving}
+                    className="px-4 py-2 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 font-semibold rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {saving ? "Saving..." : "Save Social Networks"}
+                  </button>
                 </div>
               </div>
             )}

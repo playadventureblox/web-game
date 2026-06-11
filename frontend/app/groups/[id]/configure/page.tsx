@@ -360,7 +360,6 @@ const ConfigureGroupPage = () => {
         const response = await groupsApi.getGroupRoles(groupUuid);
         if (response.success && response.data) {
           setRoles((response.data.roles as any[]) || []);
-          // Don't auto-select any role - show empty form for creating new role
         }
       } catch (error) {
         console.error("Error fetching roles:", error);
@@ -396,7 +395,6 @@ const ConfigureGroupPage = () => {
       const response = await groupsApi.searchGroups(allianceSearch.trim());
       if (response.success && response.data) {
         const groups = (response.data.groups as any[]) || [];
-        // Filter out current group and already allied groups
         const filtered = groups.filter(
           (g) => g.id !== groupUuid && !alliances.some((a) => a.allied_group_id === g.id)
         );
@@ -447,7 +445,6 @@ const ConfigureGroupPage = () => {
     try {
       const response = await groupsApi.respondToAllianceRequest(groupUuid, allianceId, "accept");
       if (response.success) {
-        // Refresh alliances and requests
         const alliancesResponse = await groupsApi.getGroupAlliances(groupUuid);
         if (alliancesResponse.success && alliancesResponse.data) {
           setAlliances((alliancesResponse.data.alliances as any[]) || []);
@@ -485,7 +482,6 @@ const ConfigureGroupPage = () => {
     try {
       const response = await groupsApi.respondToAllianceRequest(groupUuid, allianceId, "decline");
       if (response.success) {
-        // Refresh requests
         const requestsResponse = await groupsApi.getAllianceRequests(groupUuid);
         if (requestsResponse.success && requestsResponse.data) {
           setAllianceRequests((requestsResponse.data.requests as any[]) || []);
@@ -519,7 +515,6 @@ const ConfigureGroupPage = () => {
     try {
       const response = await groupsApi.removeAlliance(groupUuid, allianceId);
       if (response.success) {
-        // Refresh alliances
         const alliancesResponse = await groupsApi.getGroupAlliances(groupUuid);
         if (alliancesResponse.success && alliancesResponse.data) {
           setAlliances((alliancesResponse.data.alliances as any[]) || []);
@@ -558,7 +553,6 @@ const ConfigureGroupPage = () => {
           message: "Join request accepted successfully!",
         });
         setShowSuccessModal(true);
-        // Refresh both lists
         fetchJoinRequests();
         fetchMembers();
       } else {
@@ -630,7 +624,6 @@ const ConfigureGroupPage = () => {
       );
 
       if (response.success) {
-        // Update local members state
         setMembers(
           members.map((m) =>
             m.user_id === pendingRoleChange.memberId
@@ -674,21 +667,18 @@ const ConfigureGroupPage = () => {
     setPendingRoleChange(null);
   };
 
-  // Check if user is owner by comparing user ID to group owner_id (rank-independent)
   const isOwner = !!currentUserId && groupData?.owner_id === currentUserId;
 
   const handleEmblemUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Show preview immediately
     const reader = new FileReader();
     reader.onloadend = () => {
       setEmblemPreview(reader.result as string);
     };
     reader.readAsDataURL(file);
 
-    // Upload to server
     setUploadingIcon(true);
     try {
       const response = await uploadApi.uploadImage(file, "group-images");
@@ -722,14 +712,12 @@ const ConfigureGroupPage = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Show preview immediately
     const reader = new FileReader();
     reader.onloadend = () => {
       setCoverPreview(reader.result as string);
     };
     reader.readAsDataURL(file);
 
-    // Upload to server
     setUploadingCover(true);
     try {
       const response = await uploadApi.uploadImage(file, "group-images");
@@ -737,8 +725,7 @@ const ConfigureGroupPage = () => {
         setCoverPhotoUrl(response.data.url as string);
         setSuccessMessage({
           title: "Success",
-          message:
-            "Cover photo uploaded successfully! Don't forget to save changes.",
+          message: "Cover photo uploaded successfully! Don't forget to save changes.",
         });
         setShowSuccessModal(true);
       } else {
@@ -797,7 +784,6 @@ const ConfigureGroupPage = () => {
           message: "Group information updated successfully!",
         });
         setShowSuccessModal(true);
-        // Refresh group data
         const groupResponse = await groupsApi.getGroupById(groupId);
         if (groupResponse.success && groupResponse.data) {
           const group = groupResponse.data.group as any;
@@ -822,10 +808,8 @@ const ConfigureGroupPage = () => {
     }
   };
 
-  // Handle manual approval toggle change
   const handleManualApprovalChange = (value: boolean) => {
     setManualApproval(value);
-    // Sync with joinSetting dropdown
     if (value && joinSetting === "open") {
       setJoinSetting("approval");
     } else if (!value && joinSetting === "approval") {
@@ -833,10 +817,8 @@ const ConfigureGroupPage = () => {
     }
   };
 
-  // Handle joinSetting dropdown change
   const handleJoinSettingChange = (value: string) => {
     setJoinSetting(value);
-    // Sync with manual approval toggle
     if (value === "approval") {
       setManualApproval(true);
     } else if (value === "open") {
@@ -928,7 +910,6 @@ const ConfigureGroupPage = () => {
     }
   };
 
-  // Handle clearing form to create new role
   const handleClearForm = () => {
     setSelectedRole(null);
     setRoleName("");
@@ -951,7 +932,6 @@ const ConfigureGroupPage = () => {
     });
   };
 
-  // Handle selecting an existing role
   const handleSelectRole = (role: any) => {
     setSelectedRole(role);
     setIsCreatingRole(false);
@@ -975,7 +955,6 @@ const ConfigureGroupPage = () => {
     });
   };
 
-  // Handle saving role (create or update)
   const handleSaveRole = async () => {
     if (!groupUuid || !roleName.trim()) return;
 
@@ -1002,10 +981,8 @@ const ConfigureGroupPage = () => {
 
       let response;
       if (selectedRole) {
-        // Updating existing role
         response = await groupsApi.updateGroupRole(groupUuid, selectedRole.id, roleData);
       } else {
-        // Creating new role
         response = await groupsApi.createGroupRole(groupUuid, roleData);
       }
 
@@ -1015,12 +992,10 @@ const ConfigureGroupPage = () => {
           message: selectedRole ? "Role updated successfully!" : "Role created successfully!",
         });
         setShowSuccessModal(true);
-        // Refresh roles list
         const rolesResponse = await groupsApi.getGroupRoles(groupUuid);
         if (rolesResponse.success && rolesResponse.data) {
           setRoles((rolesResponse.data.roles as any[]) || []);
         }
-        // Clear form after creating new role
         if (!selectedRole) {
           handleClearForm();
         }
@@ -1072,7 +1047,6 @@ const ConfigureGroupPage = () => {
   const [loadingAds, setLoadingAds] = useState(false);
   const [creatingAd, setCreatingAd] = useState(false);
 
-  // Fetch ads when Advertise Group section is active
   useEffect(() => {
     const fetchAds = async () => {
       if (activeSection !== "Advertise Group" || !groupUuid) return;
@@ -1095,7 +1069,6 @@ const ConfigureGroupPage = () => {
     if (!groupUuid || !adName || !adImage) return;
     setCreatingAd(true);
     try {
-      // Upload ad image first
       const file = await fetch(adImage).then(r => r.blob());
       const imageFile = new File([file], "ad-image.png", { type: "image/png" });
       const uploadResponse = await uploadApi.uploadImage(imageFile, "group-ad");
@@ -1160,20 +1133,16 @@ const ConfigureGroupPage = () => {
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 flex flex-col">
-      {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Header */}
       <Header
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         setSidebarOpen={setSidebarOpen}
       />
 
-      {/* Main Content */}
       <main className="flex-1">
         <div className="w-full px-4 py-6">
-          {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -1197,9 +1166,7 @@ const ConfigureGroupPage = () => {
             </Link>
           </div>
 
-          {/* Two Column Layout */}
           <div className="flex gap-6">
-            {/* Left Sidebar - Navigation */}
             <div className="w-64 flex-shrink-0">
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                 {sections.map((section) => (
@@ -1222,7 +1189,6 @@ const ConfigureGroupPage = () => {
               </div>
             </div>
 
-            {/* Main Content Area */}
             <div className="flex-1">
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
                 {loading ? (
@@ -1247,7 +1213,6 @@ const ConfigureGroupPage = () => {
                   <>
                   {activeSection === "Information" && (
                     <div className="space-y-8">
-                      {/* Group Name */}
                       <div>
                         <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                           Name
@@ -1255,9 +1220,7 @@ const ConfigureGroupPage = () => {
                         <input
                           type="text"
                           value={groupName}
-                          onChange={(e) =>
-                            setGroupName(e.target.value.slice(0, 50))
-                          }
+                          onChange={(e) => setGroupName(e.target.value.slice(0, 50))}
                           maxLength={50}
                           className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           placeholder="Name your group"
@@ -1267,16 +1230,13 @@ const ConfigureGroupPage = () => {
                         </div>
                       </div>
 
-                      {/* Description */}
                       <div>
                         <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                           Description
                         </label>
                         <textarea
                           value={groupDescription}
-                          onChange={(e) =>
-                            setGroupDescription(e.target.value.slice(0, 1000))
-                          }
+                          onChange={(e) => setGroupDescription(e.target.value.slice(0, 1000))}
                           rows={6}
                           className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                           placeholder="Describe your group"
@@ -1286,14 +1246,12 @@ const ConfigureGroupPage = () => {
                         </div>
                       </div>
 
-                      {/* Group Icon */}
                       <div>
                         <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                           Group Icon
                         </label>
                         <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-8">
                           <div className="flex items-start gap-6">
-                            {/* Preview */}
                             <div className="flex-shrink-0">
                               <div className="w-48 h-48 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden flex items-center justify-center border border-gray-200 dark:border-gray-700">
                                 {uploadingIcon ? (
@@ -1316,15 +1274,9 @@ const ConfigureGroupPage = () => {
                                 </p>
                               )}
                             </div>
-
-                            {/* Upload area */}
                             <div className="flex-1 text-center">
-                              <p className="text-gray-700 dark:text-gray-300 mb-2">
-                                Drag a file here
-                              </p>
-                              <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">
-                                - Or -
-                              </p>
+                              <p className="text-gray-700 dark:text-gray-300 mb-2">Drag a file here</p>
+                              <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">- Or -</p>
                               <label className="inline-block">
                                 <input
                                   type="file"
@@ -1342,18 +1294,15 @@ const ConfigureGroupPage = () => {
                         </div>
                       </div>
 
-                      {/* Group Background */}
                       <div>
                         <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                           Group Background
                         </label>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                          Group background must be one of the available dimensions:
-                          720x228, 1440x456
+                          Group background must be one of the available dimensions: 720x228, 1440x456
                         </p>
                         <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-8">
                           <div className="flex items-start gap-6">
-                            {/* Preview */}
                             <div className="flex-shrink-0">
                               <div className="w-48 h-32 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden flex items-center justify-center border border-gray-200 dark:border-gray-700 relative">
                                 {uploadingCover ? (
@@ -1367,9 +1316,7 @@ const ConfigureGroupPage = () => {
                                     className="object-cover w-full h-full"
                                   />
                                 ) : (
-                                  <span className="text-gray-400 text-sm">
-                                    Preview
-                                  </span>
+                                  <span className="text-gray-400 text-sm">Preview</span>
                                 )}
                               </div>
                               {emblemPreview && (
@@ -1378,15 +1325,9 @@ const ConfigureGroupPage = () => {
                                 </p>
                               )}
                             </div>
-
-                            {/* Upload area */}
                             <div className="flex-1 text-center">
-                              <p className="text-gray-700 dark:text-gray-300 mb-2">
-                                Drag a file here
-                              </p>
-                              <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">
-                                - Or -
-                              </p>
+                              <p className="text-gray-700 dark:text-gray-300 mb-2">Drag a file here</p>
+                              <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">- Or -</p>
                               <label className="inline-block">
                                 <input
                                   type="file"
@@ -1404,7 +1345,6 @@ const ConfigureGroupPage = () => {
                         </div>
                       </div>
 
-                      {/* Join Settings */}
                       <div>
                         <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                           Who can join this group?
@@ -1420,16 +1360,13 @@ const ConfigureGroupPage = () => {
                         </select>
                       </div>
 
-                      {/* Save Button */}
                       <div className="flex gap-3 pt-4">
                         <button
                           onClick={handleSaveInformation}
                           disabled={saving || uploadingIcon || uploadingCover}
                           className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                         >
-                          {saving && (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          )}
+                          {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                           {saving ? "Saving..." : "Save Changes"}
                         </button>
                         <Link href={`/groups/${groupId}`}>
@@ -1447,7 +1384,6 @@ const ConfigureGroupPage = () => {
                       Join Requirements
                     </h2>
 
-                    {/* Manual Approval */}
                     <div className="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg p-5">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -1455,7 +1391,7 @@ const ConfigureGroupPage = () => {
                             Manual Approval
                           </h3>
                           <p className="text-sm text-gray-600 dark:text-gray-400">
-                            User requests must be accepted to join community
+                            User requests must be accepted to join group
                           </p>
                         </div>
                         <ToggleSwitch
@@ -1465,93 +1401,33 @@ const ConfigureGroupPage = () => {
                       </div>
                     </div>
 
-                    {/* Account Age */}
                     <div className="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg p-5">
                       <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">
                         Account Age
                       </h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                        Only accounts created more than the selected number of
-                        days ago can join.
+                        Only accounts created more than the selected number of days ago can join.
                       </p>
                       <div className="space-y-3">
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="accountAge"
-                            checked={accountAge === "none"}
-                            onChange={() => setAccountAge("none")}
-                            className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                          />
-                          <span className="text-gray-900 dark:text-gray-100 font-medium">
-                            No Restriction
-                          </span>
-                        </label>
-
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="accountAge"
-                            checked={accountAge === "1day"}
-                            onChange={() => setAccountAge("1day")}
-                            className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                          />
-                          <span className="text-gray-900 dark:text-gray-100 font-medium">
-                            1 Day
-                          </span>
-                        </label>
-
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="accountAge"
-                            checked={accountAge === "3days"}
-                            onChange={() => setAccountAge("3days")}
-                            className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                          />
-                          <span className="text-gray-900 dark:text-gray-100 font-medium">
-                            3 Days
-                          </span>
-                        </label>
-
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="accountAge"
-                            checked={accountAge === "7days"}
-                            onChange={() => setAccountAge("7days")}
-                            className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                          />
-                          <span className="text-gray-900 dark:text-gray-100 font-medium">
-                            7 Days
-                          </span>
-                        </label>
-
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="accountAge"
-                            checked={accountAge === "30days"}
-                            onChange={() => setAccountAge("30days")}
-                            className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                          />
-                          <span className="text-gray-900 dark:text-gray-100 font-medium">
-                            30 Days
-                          </span>
-                        </label>
-
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="accountAge"
-                            checked={accountAge === "90days"}
-                            onChange={() => setAccountAge("90days")}
-                            className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                          />
-                          <span className="text-gray-900 dark:text-gray-100 font-medium">
-                            90 Days
-                          </span>
-                        </label>
+                        {[
+                          { value: "none", label: "No Restriction" },
+                          { value: "1day", label: "1 Day" },
+                          { value: "3days", label: "3 Days" },
+                          { value: "7days", label: "7 Days" },
+                          { value: "30days", label: "30 Days" },
+                          { value: "90days", label: "90 Days" },
+                        ].map(({ value, label }) => (
+                          <label key={value} className="flex items-center gap-3 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="accountAge"
+                              checked={accountAge === value}
+                              onChange={() => setAccountAge(value as any)}
+                              className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            />
+                            <span className="text-gray-900 dark:text-gray-100 font-medium">{label}</span>
+                          </label>
+                        ))}
                       </div>
                     </div>
 
@@ -1564,8 +1440,7 @@ const ConfigureGroupPage = () => {
                     </button>
                   </div>
                 )}
-
-                  {activeSection === "Social Links" && (
+{activeSection === "Social Links" && (
                   <div className="space-y-6">
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                       Social Links
@@ -1760,7 +1635,6 @@ const ConfigureGroupPage = () => {
 
                   {activeSection === "Members" && (
                   <div className="space-y-6">
-                    {/* Tabs */}
                     <div className="flex border-b border-gray-300 dark:border-gray-600">
                       <button
                         onClick={() => setMembersTab("members")}
@@ -1800,10 +1674,8 @@ const ConfigureGroupPage = () => {
                       </button>
                     </div>
 
-                    {/* Members Tab */}
                     {membersTab === "members" && (
                       <div className="space-y-4">
-                        {/* Search and Filter */}
                         <div className="flex gap-3">
                           <div className="flex-1 relative">
                             <input
@@ -1829,7 +1701,6 @@ const ConfigureGroupPage = () => {
                           </select>
                         </div>
 
-                        {/* Members Grid */}
                         {loadingMembers ? (
                           <div className="flex items-center justify-center py-12">
                             <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -1845,9 +1716,7 @@ const ConfigureGroupPage = () => {
                                 const matchesSearch = member.username
                                   ?.toLowerCase()
                                   .includes(memberSearch.toLowerCase());
-
                                 const matchesRole = memberRoleFilter === "All" || member.role_id === memberRoleFilter;
-
                                 return matchesSearch && matchesRole;
                               })
                               .map((member) => (
@@ -1855,7 +1724,6 @@ const ConfigureGroupPage = () => {
                                   key={member.user_id}
                                   className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4"
                                 >
-                                  {/* Member Header */}
                                   <div className="flex items-start gap-3 mb-3">
                                     <div className="w-12 h-12 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0 overflow-hidden relative">
                                       <Image
@@ -1871,14 +1739,11 @@ const ConfigureGroupPage = () => {
                                         {member.username}
                                       </h3>
                                     </div>
-                                    {/* Three-dot menu */}
                                     <div className="relative">
                                       <button
                                         onClick={() =>
                                           setOpenMemberMenu(
-                                            openMemberMenu === member.user_id
-                                              ? null
-                                              : member.user_id
+                                            openMemberMenu === member.user_id ? null : member.user_id
                                           )
                                         }
                                         className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
@@ -1896,35 +1761,17 @@ const ConfigureGroupPage = () => {
                                             <button
                                               onClick={async () => {
                                                 setOpenMemberMenu(null);
-                                                if (
-                                                  confirm(
-                                                    `Kick ${member.username} from the group?`
-                                                  )
-                                                ) {
-                                                  const response =
-                                                    await groupsApi.removeMember(
-                                                      groupUuid || groupId,
-                                                      member.user_id
-                                                    );
+                                                if (confirm(`Kick ${member.username} from the group?`)) {
+                                                  const response = await groupsApi.removeMember(
+                                                    groupUuid || groupId,
+                                                    member.user_id
+                                                  );
                                                   if (response.success) {
-                                                    setMembers(
-                                                      members.filter(
-                                                        (m) =>
-                                                          m.user_id !== member.user_id
-                                                      )
-                                                    );
-                                                    setSuccessMessage({
-                                                      title: "Success",
-                                                      message: "Member removed successfully",
-                                                    });
+                                                    setMembers(members.filter((m) => m.user_id !== member.user_id));
+                                                    setSuccessMessage({ title: "Success", message: "Member removed successfully" });
                                                     setShowSuccessModal(true);
                                                   } else {
-                                                    setSuccessMessage({
-                                                      title: "Error",
-                                                      message:
-                                                        response.error ||
-                                                        "Failed to remove member",
-                                                    });
+                                                    setSuccessMessage({ title: "Error", message: response.error || "Failed to remove member" });
                                                     setShowSuccessModal(true);
                                                   }
                                                 }
@@ -1948,7 +1795,6 @@ const ConfigureGroupPage = () => {
                                     </div>
                                   </div>
 
-                                  {/* Role Display and Dropdown */}
                                   <div className="space-y-2">
                                     <div className="text-xs text-gray-500 dark:text-gray-400">
                                       Current Role: <span className="font-semibold text-gray-700 dark:text-gray-300">
@@ -1966,11 +1812,7 @@ const ConfigureGroupPage = () => {
                                         onChange={(e) => {
                                           const newRoleId = e.target.value;
                                           if (newRoleId && newRoleId !== member.role_id) {
-                                            handleRoleChangeRequest(
-                                              member.user_id,
-                                              member.username,
-                                              newRoleId
-                                            );
+                                            handleRoleChangeRequest(member.user_id, member.username, newRoleId);
                                           }
                                         }}
                                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1990,15 +1832,12 @@ const ConfigureGroupPage = () => {
                       </div>
                     )}
 
-                    {/* Requests Tab */}
                     {membersTab === "requests" && (
                       <div className="space-y-4">
                         {loadingRequests ? (
                           <div className="flex items-center justify-center py-12">
                             <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400" />
-                            <span className="ml-3 text-gray-600 dark:text-gray-400">
-                              Loading requests...
-                            </span>
+                            <span className="ml-3 text-gray-600 dark:text-gray-400">Loading requests...</span>
                           </div>
                         ) : joinRequests.length > 0 ? (
                           <div className="space-y-3">
@@ -2028,9 +1867,7 @@ const ConfigureGroupPage = () => {
                                     </div>
                                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                       Requested {new Date(request.requested_at).toLocaleDateString("en-US", {
-                                        month: "short",
-                                        day: "numeric",
-                                        year: "numeric",
+                                        month: "short", day: "numeric", year: "numeric",
                                       })}
                                     </p>
                                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -2057,9 +1894,7 @@ const ConfigureGroupPage = () => {
                           </div>
                         ) : (
                           <div className="text-center py-12">
-                            <p className="text-gray-600 dark:text-gray-400">
-                              No pending requests
-                            </p>
+                            <p className="text-gray-600 dark:text-gray-400">No pending requests</p>
                             <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
                               Join requests will appear here when manual approval is enabled
                             </p>
@@ -2067,7 +1902,7 @@ const ConfigureGroupPage = () => {
                         )}
                       </div>
                     )}
-                    {/* Banned Tab */}
+
                     {membersTab === "banned" && (
                       <div className="space-y-4">
                         <div className="relative">
@@ -2082,7 +1917,7 @@ const ConfigureGroupPage = () => {
                         </div>
                         {bannedUsers.length === 0 ? (
                           <div className="text-center py-12">
-                            <p className="text-gray-600 dark:text-gray-400">No users are banned from this community</p>
+                            <p className="text-gray-600 dark:text-gray-400">No users are banned from this group</p>
                           </div>
                         ) : (
                           <div className="space-y-3">
@@ -2130,14 +1965,11 @@ const ConfigureGroupPage = () => {
 
                   {activeSection === "Roles" && (
                   <div className="space-y-6">
-
-
                     <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                       Roles
                     </h2>
 
                     <div className="flex gap-6">
-                      {/* Left: Role List */}
                       <div className="w-64 flex-shrink-0 space-y-2">
                         {loadingRoles ? (
                           <div className="py-8 text-center">
@@ -2157,35 +1989,23 @@ const ConfigureGroupPage = () => {
                                   : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                                 }`}
                             >
-                              <div className="font-semibold text-gray-900 dark:text-gray-100">
-                                {role.name}
-                              </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                Rank: {role.rank}
-                              </div>
+                              <div className="font-semibold text-gray-900 dark:text-gray-100">{role.name}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Rank: {role.rank}</div>
                             </button>
                           ))
                         )}
 
-                        {/* Create Role Button */}
                         <button
-                          onClick={() => {
-                            handleClearForm();
-                            setIsCreatingRole(true);
-                          }}
+                          onClick={() => { handleClearForm(); setIsCreatingRole(true); }}
                           className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors mt-2"
                         >
                           + Create Role
                         </button>
                       </div>
 
-                      {/* Right: Role Details */}
                       <div className="flex-1 space-y-6">
-                        {/* Name */}
                         <div>
-                          <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                            Name
-                          </label>
+                          <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Name</label>
                           <input
                             type="text"
                             value={roleName}
@@ -2194,16 +2014,11 @@ const ConfigureGroupPage = () => {
                             placeholder="Enter role name"
                             className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
-                          <div className="text-right text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {roleName.length}/100
-                          </div>
+                          <div className="text-right text-xs text-gray-500 dark:text-gray-400 mt-1">{roleName.length}/100</div>
                         </div>
 
-                        {/* Description */}
                         <div>
-                          <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                            Description
-                          </label>
+                          <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Description</label>
                           <textarea
                             rows={3}
                             value={roleDescription}
@@ -2212,16 +2027,11 @@ const ConfigureGroupPage = () => {
                             placeholder="Enter role description"
                             className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-gray-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
-                          <div className="text-right text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {roleDescription.length}/1000
-                          </div>
+                          <div className="text-right text-xs text-gray-500 dark:text-gray-400 mt-1">{roleDescription.length}/1000</div>
                         </div>
 
-                        {/* Rank */}
                         <div>
-                          <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                            Rank (0-255)
-                          </label>
+                          <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Rank (0-255)</label>
                           <input
                             type="number"
                             value={roleRank}
@@ -2238,9 +2048,7 @@ const ConfigureGroupPage = () => {
                             onClick={() => setPermissionSectionsCollapsed(prev => ({ ...prev, posts: !prev.posts }))}
                             className="w-full bg-gray-50 dark:bg-gray-700/50 px-5 py-3 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                           >
-                            <h3 className="font-bold text-gray-900 dark:text-gray-100">
-                              Posts
-                            </h3>
+                            <h3 className="font-bold text-gray-900 dark:text-gray-100">Posts</h3>
                             <span className="text-sm text-gray-600 dark:text-gray-400">
                               {permissionSectionsCollapsed.posts ? "Expand" : "Collapse"}
                             </span>
@@ -2248,45 +2056,24 @@ const ConfigureGroupPage = () => {
                           {!permissionSectionsCollapsed.posts && (
                             <div className="p-5 space-y-4 bg-gray-50 dark:bg-gray-800">
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-700 dark:text-gray-100">
-                                  Post on community wall
-                                </span>
+                                <span className="text-sm text-gray-700 dark:text-gray-100">Post on group wall</span>
                                 <ToggleSwitch
                                   enabled={rolePermissions.postWall}
-                                  onChange={(val) =>
-                                    setRolePermissions({
-                                      ...rolePermissions,
-                                      postWall: val,
-                                    })
-                                  }
+                                  onChange={(val) => setRolePermissions({ ...rolePermissions, postWall: val })}
                                 />
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-700 dark:text-gray-100">
-                                  Delete community wall posts
-                                </span>
+                                <span className="text-sm text-gray-700 dark:text-gray-100">Delete group wall posts</span>
                                 <ToggleSwitch
                                   enabled={rolePermissions.deleteWallPosts}
-                                  onChange={(val) =>
-                                    setRolePermissions({
-                                      ...rolePermissions,
-                                      deleteWallPosts: val,
-                                    })
-                                  }
+                                  onChange={(val) => setRolePermissions({ ...rolePermissions, deleteWallPosts: val })}
                                 />
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-700 dark:text-gray-100">
-                                  Post group shout
-                                </span>
+                                <span className="text-sm text-gray-700 dark:text-gray-100">Post group shout</span>
                                 <ToggleSwitch
                                   enabled={rolePermissions.postShout}
-                                  onChange={(val) =>
-                                    setRolePermissions({
-                                      ...rolePermissions,
-                                      postShout: val,
-                                    })
-                                  }
+                                  onChange={(val) => setRolePermissions({ ...rolePermissions, postShout: val })}
                                 />
                               </div>
                             </div>
@@ -2299,9 +2086,7 @@ const ConfigureGroupPage = () => {
                             onClick={() => setPermissionSectionsCollapsed(prev => ({ ...prev, members: !prev.members }))}
                             className="w-full bg-gray-50 dark:bg-gray-700/50 px-5 py-3 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                           >
-                            <h3 className="font-bold text-gray-900 dark:text-gray-100">
-                              Members
-                            </h3>
+                            <h3 className="font-bold text-gray-900 dark:text-gray-100">Members</h3>
                             <span className="text-sm text-gray-600 dark:text-gray-400">
                               {permissionSectionsCollapsed.members ? "Expand" : "Collapse"}
                             </span>
@@ -2309,45 +2094,24 @@ const ConfigureGroupPage = () => {
                           {!permissionSectionsCollapsed.members && (
                             <div className="p-5 space-y-4 bg-gray-50 dark:bg-gray-800">
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-700 dark:text-gray-100">
-                                  Manage members
-                                </span>
+                                <span className="text-sm text-gray-700 dark:text-gray-100">Manage members</span>
                                 <ToggleSwitch
                                   enabled={rolePermissions.manageMembers}
-                                  onChange={(val) =>
-                                    setRolePermissions({
-                                      ...rolePermissions,
-                                      manageMembers: val,
-                                    })
-                                  }
+                                  onChange={(val) => setRolePermissions({ ...rolePermissions, manageMembers: val })}
                                 />
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-700 dark:text-gray-100">
-                                  Delete members
-                                </span>
+                                <span className="text-sm text-gray-700 dark:text-gray-100">Delete members</span>
                                 <ToggleSwitch
                                   enabled={rolePermissions.deleteMembers}
-                                  onChange={(val) =>
-                                    setRolePermissions({
-                                      ...rolePermissions,
-                                      deleteMembers: val,
-                                    })
-                                  }
+                                  onChange={(val) => setRolePermissions({ ...rolePermissions, deleteMembers: val })}
                                 />
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-700 dark:text-gray-100">
-                                  Ban members
-                                </span>
+                                <span className="text-sm text-gray-700 dark:text-gray-100">Ban members</span>
                                 <ToggleSwitch
                                   enabled={rolePermissions.banMembers}
-                                  onChange={(val) =>
-                                    setRolePermissions({
-                                      ...rolePermissions,
-                                      banMembers: val,
-                                    })
-                                  }
+                                  onChange={(val) => setRolePermissions({ ...rolePermissions, banMembers: val })}
                                 />
                               </div>
                             </div>
@@ -2360,9 +2124,7 @@ const ConfigureGroupPage = () => {
                             onClick={() => setPermissionSectionsCollapsed(prev => ({ ...prev, moderation: !prev.moderation }))}
                             className="w-full bg-gray-50 dark:bg-gray-700/50 px-5 py-3 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                           >
-                            <h3 className="font-bold text-gray-900 dark:text-gray-100">
-                              Administration
-                            </h3>
+                            <h3 className="font-bold text-gray-900 dark:text-gray-100">Administration</h3>
                             <span className="text-sm text-gray-600 dark:text-gray-400">
                               {permissionSectionsCollapsed.moderation ? "Expand" : "Collapse"}
                             </span>
@@ -2370,108 +2132,58 @@ const ConfigureGroupPage = () => {
                           {!permissionSectionsCollapsed.moderation && (
                             <div className="p-5 space-y-4 bg-gray-50 dark:bg-gray-800">
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-700 dark:text-gray-100">
-                                  Spend group funds
-                                </span>
+                                <span className="text-sm text-gray-700 dark:text-gray-100">Spend group funds</span>
                                 <ToggleSwitch
                                   enabled={rolePermissions.spendGroupFunds}
-                                  onChange={(val) =>
-                                    setRolePermissions({
-                                      ...rolePermissions,
-                                      spendGroupFunds: val,
-                                    })
-                                  }
+                                  onChange={(val) => setRolePermissions({ ...rolePermissions, spendGroupFunds: val })}
                                 />
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-700 dark:text-gray-100">
-                                  Advertise group
-                                </span>
+                                <span className="text-sm text-gray-700 dark:text-gray-100">Advertise group</span>
                                 <ToggleSwitch
                                   enabled={rolePermissions.advertiseGroup}
-                                  onChange={(val) =>
-                                    setRolePermissions({
-                                      ...rolePermissions,
-                                      advertiseGroup: val,
-                                    })
-                                  }
+                                  onChange={(val) => setRolePermissions({ ...rolePermissions, advertiseGroup: val })}
                                 />
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-700 dark:text-gray-100">
-                                  Manage ads
-                                </span>
+                                <span className="text-sm text-gray-700 dark:text-gray-100">Manage ads</span>
                                 <ToggleSwitch
                                   enabled={rolePermissions.manageAds}
-                                  onChange={(val) =>
-                                    setRolePermissions({
-                                      ...rolePermissions,
-                                      manageAds: val,
-                                    })
-                                  }
+                                  onChange={(val) => setRolePermissions({ ...rolePermissions, manageAds: val })}
                                 />
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-700 dark:text-gray-100">
-                                  Manage alliances
-                                </span>
+                                <span className="text-sm text-gray-700 dark:text-gray-100">Manage alliances</span>
                                 <ToggleSwitch
                                   enabled={rolePermissions.manageAlliances}
-                                  onChange={(val) =>
-                                    setRolePermissions({
-                                      ...rolePermissions,
-                                      manageAlliances: val,
-                                    })
-                                  }
+                                  onChange={(val) => setRolePermissions({ ...rolePermissions, manageAlliances: val })}
                                 />
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-700 dark:text-gray-100">
-                                  Manage roles
-                                </span>
+                                <span className="text-sm text-gray-700 dark:text-gray-100">Manage roles</span>
                                 <ToggleSwitch
                                   enabled={rolePermissions.manageRoles}
-                                  onChange={(val) =>
-                                    setRolePermissions({
-                                      ...rolePermissions,
-                                      manageRoles: val,
-                                    })
-                                  }
+                                  onChange={(val) => setRolePermissions({ ...rolePermissions, manageRoles: val })}
                                 />
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-700 dark:text-gray-100">
-                                  Manage store
-                                </span>
+                                <span className="text-sm text-gray-700 dark:text-gray-100">Manage store</span>
                                 <ToggleSwitch
                                   enabled={rolePermissions.manageStore}
-                                  onChange={(val) =>
-                                    setRolePermissions({
-                                      ...rolePermissions,
-                                      manageStore: val,
-                                    })
-                                  }
+                                  onChange={(val) => setRolePermissions({ ...rolePermissions, manageStore: val })}
                                 />
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-700 dark:text-gray-100">
-                                  Manage games
-                                </span>
+                                <span className="text-sm text-gray-700 dark:text-gray-100">Manage games</span>
                                 <ToggleSwitch
                                   enabled={rolePermissions.manageGames}
-                                  onChange={(val) =>
-                                    setRolePermissions({
-                                      ...rolePermissions,
-                                      manageGames: val,
-                                    })
-                                  }
+                                  onChange={(val) => setRolePermissions({ ...rolePermissions, manageGames: val })}
                                 />
                               </div>
                             </div>
                           )}
                         </div>
 
-                        {/* Action Button at Bottom */}
                         {selectedRole ? (
                           <button
                             onClick={handleSaveRole}
@@ -2500,7 +2212,6 @@ const ConfigureGroupPage = () => {
                       Alliances Management
                     </h2>
 
-                    {/* Search for groups to ally with */}
                     <div className="space-y-3">
                       <div className="flex gap-3">
                         <input
@@ -2520,26 +2231,14 @@ const ConfigureGroupPage = () => {
                         </button>
                       </div>
 
-                      {/* Search results */}
                       {searchResults.length > 0 && (
                         <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-3 space-y-2 max-h-60 overflow-y-auto">
                           {searchResults.map((group) => (
-                            <div
-                              key={group.id}
-                              className="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                            >
-                              <img
-                                src={group.icon_url || '/default-group.png'}
-                                alt={group.name}
-                                className="w-10 h-10 rounded"
-                              />
+                            <div key={group.id} className="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                              <img src={group.icon_url || '/default-group.png'} alt={group.name} className="w-10 h-10 rounded" />
                               <div className="flex-1">
-                                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                  {group.name}
-                                </h4>
-                                <p className="text-xs text-gray-600 dark:text-gray-400">
-                                  {group.member_count} members
-                                </p>
+                                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{group.name}</h4>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">{group.member_count} members</p>
                               </div>
                               <button
                                 onClick={() => handleSendAllianceRequest(group.id)}
@@ -2553,7 +2252,6 @@ const ConfigureGroupPage = () => {
                       )}
                     </div>
 
-                    {/* Tabs for Allies and Requests */}
                     <div className="border-b border-gray-300 dark:border-gray-600">
                       <div className="flex gap-4">
                         <button
@@ -2577,7 +2275,6 @@ const ConfigureGroupPage = () => {
                       </div>
                     </div>
 
-                    {/* Allies Tab */}
                     {alliancesTab === "allies" && (
                       <div>
                         {alliances.length === 0 ? (
@@ -2587,22 +2284,11 @@ const ConfigureGroupPage = () => {
                         ) : (
                           <div className="grid grid-cols-2 gap-4">
                             {alliances.map((alliance) => (
-                              <div
-                                key={alliance.id}
-                                className="flex items-center gap-3 p-3 border border-gray-300 dark:border-gray-600 rounded-lg"
-                              >
-                                <img
-                                  src={alliance.allied_group_icon || '/default-group.png'}
-                                  alt={alliance.allied_group_name}
-                                  className="w-12 h-12 rounded"
-                                />
+                              <div key={alliance.id} className="flex items-center gap-3 p-3 border border-gray-300 dark:border-gray-600 rounded-lg">
+                                <img src={alliance.allied_group_icon || '/default-group.png'} alt={alliance.allied_group_name} className="w-12 h-12 rounded" />
                                 <div className="flex-1">
-                                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                    {alliance.allied_group_name}
-                                  </h4>
-                                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                                    {alliance.allied_group_member_count} members
-                                  </p>
+                                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{alliance.allied_group_name}</h4>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400">{alliance.allied_group_member_count} members</p>
                                 </div>
                                 <button
                                   onClick={() => handleRemoveAlliance(alliance.id)}
@@ -2617,32 +2303,18 @@ const ConfigureGroupPage = () => {
                       </div>
                     )}
 
-                    {/* Requests Tab */}
                     {alliancesTab === "requests" && (
                       <div>
                         {allianceRequests.length === 0 ? (
-                          <p className="text-center text-gray-600 dark:text-gray-400 py-8">
-                            No pending alliance requests.
-                          </p>
+                          <p className="text-center text-gray-600 dark:text-gray-400 py-8">No pending alliance requests.</p>
                         ) : (
                           <div className="space-y-3">
                             {allianceRequests.map((request) => (
-                              <div
-                                key={request.id}
-                                className="flex items-center gap-3 p-3 border border-gray-300 dark:border-gray-600 rounded-lg"
-                              >
-                                <img
-                                  src={request.requesting_group_icon || '/default-group.png'}
-                                  alt={request.requesting_group_name}
-                                  className="w-12 h-12 rounded"
-                                />
+                              <div key={request.id} className="flex items-center gap-3 p-3 border border-gray-300 dark:border-gray-600 rounded-lg">
+                                <img src={request.requesting_group_icon || '/default-group.png'} alt={request.requesting_group_name} className="w-12 h-12 rounded" />
                                 <div className="flex-1">
-                                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                    {request.requesting_group_name}
-                                  </h4>
-                                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                                    {request.requesting_group_member_count} members
-                                  </p>
+                                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{request.requesting_group_name}</h4>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400">{request.requesting_group_member_count} members</p>
                                   <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                                     Requested {new Date(request.requested_at).toLocaleDateString()}
                                   </p>
@@ -2672,7 +2344,6 @@ const ConfigureGroupPage = () => {
 
                   {activeSection === "Advertise Group" && (
                   <div className="space-y-6">
-                    {/* Tabs */}
                     <div className="flex border-b border-gray-200 dark:border-gray-700">
                       <button
                         onClick={() => setAdTab("create")}
@@ -2682,9 +2353,7 @@ const ConfigureGroupPage = () => {
                           }`}
                       >
                         Create Ad
-                        {adTab === "create" && (
-                          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 dark:bg-gray-100" />
-                        )}
+                        {adTab === "create" && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 dark:bg-gray-100" />}
                       </button>
                       <button
                         onClick={() => setAdTab("manage")}
@@ -2694,70 +2363,43 @@ const ConfigureGroupPage = () => {
                           }`}
                       >
                         Manage Ads
-                        {adTab === "manage" && (
-                          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 dark:bg-gray-100" />
-                        )}
+                        {adTab === "manage" && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 dark:bg-gray-100" />}
                       </button>
                     </div>
 
                     {adTab === "create" ? (
                       <div className="space-y-6">
-                        {/* Ad Format Selection */}
                         <div>
-                          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">
-                            Select Ad Format
-                          </h3>
+                          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Select Ad Format</h3>
                           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                            Download, edit and upload one of the following
-                            templates:
+                            Download, edit and upload one of the following templates:
                           </p>
                           <div className="flex gap-3">
-                            <button
-                              onClick={() => setAdFormat("banner")}
-                              className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${adFormat === "banner"
-                                  ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
-                                  : "bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-600"
-                                }`}
-                            >
-                              728 x 90 Banner
-                            </button>
-                            <button
-                              onClick={() => setAdFormat("skyscraper")}
-                              className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${adFormat === "skyscraper"
-                                  ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
-                                  : "bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-600"
-                                }`}
-                            >
-                              160 x 600 Skyscraper
-                            </button>
-                            <button
-                              onClick={() => setAdFormat("rectangle")}
-                              className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${adFormat === "rectangle"
-                                  ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
-                                  : "bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-600"
-                                }`}
-                            >
-                              300 x 250 Rectangle
-                            </button>
+                            {[
+                              { key: "banner", label: "728 x 90 Banner" },
+                              { key: "skyscraper", label: "160 x 600 Skyscraper" },
+                              { key: "rectangle", label: "300 x 250 Rectangle" },
+                            ].map(({ key, label }) => (
+                              <button
+                                key={key}
+                                onClick={() => setAdFormat(key as any)}
+                                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${adFormat === key
+                                    ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
+                                    : "bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-600"
+                                  }`}
+                              >
+                                {label}
+                              </button>
+                            ))}
                           </div>
                           <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
-                            <span>
-                              For tips and tricks, read the tutorial:{" "}
-                            </span>
-                            <a
-                              href="#"
-                              className="text-blue-600 dark:text-blue-400 hover:underline"
-                            >
-                              How to Design an Effective Ad
-                            </a>
+                            <span>For tips and tricks, read the tutorial: </span>
+                            <a href="#" className="text-blue-600 dark:text-blue-400 hover:underline">How to Design an Effective Ad</a>
                           </div>
                         </div>
 
-                        {/* Ad Name */}
                         <div>
-                          <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                            Name your Ad
-                          </label>
+                          <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Name your Ad</label>
                           <input
                             type="text"
                             value={adName}
@@ -2767,11 +2409,8 @@ const ConfigureGroupPage = () => {
                           />
                         </div>
 
-                        {/* Upload Ad */}
                         <div>
-                          <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
-                            Upload an Ad
-                          </label>
+                          <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Upload an Ad</label>
                           <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 bg-gray-50 dark:bg-gray-800">
                             {adImage ? (
                               <div className="relative inline-block w-full max-w-md h-64">
@@ -2781,18 +2420,8 @@ const ConfigureGroupPage = () => {
                                   fill
                                   className="object-contain rounded border border-gray-300 dark:border-gray-600"
                                   style={{
-                                    maxWidth:
-                                      adFormat === "banner"
-                                        ? "728px"
-                                        : adFormat === "skyscraper"
-                                          ? "160px"
-                                          : "300px",
-                                    maxHeight:
-                                      adFormat === "banner"
-                                        ? "90px"
-                                        : adFormat === "skyscraper"
-                                          ? "600px"
-                                          : "250px",
+                                    maxWidth: adFormat === "banner" ? "728px" : adFormat === "skyscraper" ? "160px" : "300px",
+                                    maxHeight: adFormat === "banner" ? "90px" : adFormat === "skyscraper" ? "600px" : "250px",
                                   }}
                                 />
                                 <button
@@ -2805,19 +2434,10 @@ const ConfigureGroupPage = () => {
                             ) : (
                               <div className="text-center">
                                 <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                                <p className="text-gray-700 dark:text-gray-300 mb-2">
-                                  Drag an image here
-                                </p>
-                                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                                  - Or -
-                                </p>
+                                <p className="text-gray-700 dark:text-gray-300 mb-2">Drag an image here</p>
+                                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">- Or -</p>
                                 <label className="inline-block">
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleAdImageUpload}
-                                    className="hidden"
-                                  />
+                                  <input type="file" accept="image/*" onChange={handleAdImageUpload} className="hidden" />
                                   <span className="px-6 py-2.5 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 font-medium rounded-lg cursor-pointer inline-block transition-colors text-sm">
                                     Select an image from your computer
                                   </span>
@@ -2826,37 +2446,29 @@ const ConfigureGroupPage = () => {
                             )}
                           </div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                            The ad needs to be approved by a Moderator before it
-                            can be launched from your Ad Page
+                            The ad needs to be approved by a Moderator before it can be launched from your Ad Page
                           </p>
                         </div>
 
-                        {/* Bidding */}
                         <div>
                           <div className="flex items-start gap-2 mb-3">
-                            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                              Bidding
-                            </h3>
+                            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Bidding</h3>
                             <div className="group relative">
                               <button className="w-5 h-5 rounded-full border border-gray-400 dark:border-gray-500 flex items-center justify-center text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 i
                               </button>
                               <div className="hidden group-hover:block absolute left-0 top-full mt-2 w-64 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg p-3 z-10">
-                                The minimum bid price depends on your selected
-                                target audience and Ad Format.
+                                The minimum bid price depends on your selected target audience and Ad Format.
                               </div>
                             </div>
                           </div>
                           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                            The minimum bid price depends on your selected
-                            target audience and Ad Format.
+                            The minimum bid price depends on your selected target audience and Ad Format.
                           </p>
                           <div className="bg-gray-900 dark:bg-gray-700 rounded-lg p-4 mb-4">
                             <div className="flex items-center justify-between">
                               <div>
-                                <label className="text-sm text-gray-300 dark:text-gray-400 block mb-1">
-                                  Max Bid
-                                </label>
+                                <label className="text-sm text-gray-300 dark:text-gray-400 block mb-1">Max Bid</label>
                                 <input
                                   type="number"
                                   step="0.01"
@@ -2867,37 +2479,24 @@ const ConfigureGroupPage = () => {
                                 />
                               </div>
                               <div className="text-right">
-                                <p className="text-sm text-gray-400">
-                                  Cost Per Play (Ad Credit)
-                                </p>
+                                <p className="text-sm text-gray-400">Cost Per Play (Ad Credit)</p>
                               </div>
                             </div>
                           </div>
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">
-                                Minimum Bid:
-                              </span>
-                              <span className="text-gray-900 dark:text-gray-100 font-medium">
-                                0.10
-                              </span>
+                              <span className="text-gray-600 dark:text-gray-400">Minimum Bid:</span>
+                              <span className="text-gray-900 dark:text-gray-100 font-medium">0.10</span>
                             </div>
                             <div className="flex justify-between text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">
-                                Ad Format:
-                              </span>
-                              <span className="text-gray-900 dark:text-gray-100 font-medium">
-                                {getAdDimensions()}
-                              </span>
+                              <span className="text-gray-600 dark:text-gray-400">Ad Format:</span>
+                              <span className="text-gray-900 dark:text-gray-100 font-medium">{getAdDimensions()}</span>
                             </div>
                           </div>
                         </div>
 
-                        {/* Ad Set Name */}
                         <div>
-                          <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                            Ad Set Name
-                          </label>
+                          <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Ad Set Name</label>
                           <input
                             type="text"
                             value={adSetName}
@@ -2907,7 +2506,6 @@ const ConfigureGroupPage = () => {
                           />
                         </div>
 
-                        {/* Action Buttons */}
                         <div className="flex gap-3 pt-4">
                           <button
                             onClick={handleCreateAd}
@@ -2926,129 +2524,67 @@ const ConfigureGroupPage = () => {
                       </div>
                     ) : (
                       <div className="space-y-6">
-                        {/* Stats Overview */}
                         {(() => {
                           const totalSpent = existingAds.reduce((sum: number, ad: any) => sum + (parseFloat(ad.spent) || 0), 0);
                           const totalImpressions = existingAds.reduce((sum: number, ad: any) => sum + (ad.impressions || 0), 0);
                           const totalClicks = existingAds.reduce((sum: number, ad: any) => sum + (ad.clicks || 0), 0);
                           const ctr = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(1) : "0.0";
                           return (
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm text-gray-600 dark:text-gray-400">Total Spent</span>
-                              <TrendingUp className="w-5 h-5 text-green-500" />
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                              {[
+                                { label: "Total Spent", value: `◈ ${totalSpent.toFixed(2)}`, sub: "All time", icon: <TrendingUp className="w-5 h-5 text-green-500" /> },
+                                { label: "Impressions", value: totalImpressions.toLocaleString(), sub: "Total views", icon: <BarChart3 className="w-5 h-5 text-blue-500" /> },
+                                { label: "Clicks", value: totalClicks.toLocaleString(), sub: "Total clicks", icon: <BarChart3 className="w-5 h-5 text-purple-500" /> },
+                                { label: "CTR", value: `${ctr}%`, sub: "Click-through rate", icon: <BarChart3 className="w-5 h-5 text-orange-500" /> },
+                              ].map(({ label, value, sub, icon }) => (
+                                <div key={label} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm text-gray-600 dark:text-gray-400">{label}</span>
+                                    {icon}
+                                  </div>
+                                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{sub}</p>
+                                </div>
+                              ))}
                             </div>
-                            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">◈ {totalSpent.toFixed(2)}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">All time</p>
-                          </div>
-                          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm text-gray-600 dark:text-gray-400">Impressions</span>
-                              <BarChart3 className="w-5 h-5 text-blue-500" />
-                            </div>
-                            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalImpressions.toLocaleString()}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Total views</p>
-                          </div>
-                          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm text-gray-600 dark:text-gray-400">Clicks</span>
-                              <BarChart3 className="w-5 h-5 text-purple-500" />
-                            </div>
-                            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalClicks.toLocaleString()}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Total clicks</p>
-                          </div>
-                          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm text-gray-600 dark:text-gray-400">CTR</span>
-                              <BarChart3 className="w-5 h-5 text-orange-500" />
-                            </div>
-                            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{ctr}%</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Click-through rate</p>
-                          </div>
-                        </div>
                           );
                         })()}
 
-                        {/* Ads Table */}
                         <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
                           <div className="overflow-x-auto">
                             <table className="w-full">
                               <thead className="bg-gray-100 dark:bg-gray-700">
                                 <tr>
-                                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase">
-                                    Ad Name
-                                  </th>
-                                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase">
-                                    Format
-                                  </th>
-                                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase">
-                                    Status
-                                  </th>
-                                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase">
-                                    Impressions
-                                  </th>
-                                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase">
-                                    Clicks
-                                  </th>
-                                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase">
-                                    Spent
-                                  </th>
-                                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase">
-                                    Bid
-                                  </th>
-                                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase">
-                                    Actions
-                                  </th>
+                                  {["Ad Name", "Format", "Status", "Impressions", "Clicks", "Spent", "Bid", "Actions"].map((h) => (
+                                    <th key={h} className={`px-4 py-3 text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase ${h === "Actions" ? "text-right" : "text-left"}`}>
+                                      {h}
+                                    </th>
+                                  ))}
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                                 {existingAds.map((ad) => (
-                                  <tr
-                                    key={ad.id}
-                                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                                  >
-                                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 font-medium">
-                                      {ad.name}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                                      {ad.format}
-                                    </td>
+                                  <tr key={ad.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 font-medium">{ad.name}</td>
+                                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{ad.format}</td>
                                     <td className="px-4 py-3">
-                                      <span
-                                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full capitalize ${ad.status === "running"
-                                            ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400"
-                                            : ad.status === "pending"
-                                              ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400"
-                                              : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-400"
-                                          }`}
-                                      >
+                                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full capitalize ${
+                                        ad.status === "running" ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400"
+                                        : ad.status === "pending" ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400"
+                                        : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-400"
+                                      }`}>
                                         {ad.status}
                                       </span>
                                     </td>
-                                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
-                                      {(ad.impressions || 0).toLocaleString()}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
-                                      {ad.clicks || 0}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
-                                      ◈ {parseFloat(ad.spent || 0).toFixed(2)}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
-                                      {parseFloat(ad.max_bid || 0).toFixed(2)}
-                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{(ad.impressions || 0).toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{ad.clicks || 0}</td>
+                                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">◈ {parseFloat(ad.spent || 0).toFixed(2)}</td>
+                                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{parseFloat(ad.max_bid || 0).toFixed(2)}</td>
                                     <td className="px-4 py-3 text-right">
-                                      <button
-                                        onClick={() => handleToggleAdStatus(ad.id, ad.status)}
-                                        className="text-sm text-blue-600 dark:text-blue-400 hover:underline mr-3"
-                                      >
+                                      <button onClick={() => handleToggleAdStatus(ad.id, ad.status)} className="text-sm text-blue-600 dark:text-blue-400 hover:underline mr-3">
                                         {ad.status === "running" ? "Pause" : "Resume"}
                                       </button>
-                                      <button
-                                        onClick={() => handleDeleteAd(ad.id)}
-                                        className="text-sm text-red-600 dark:text-red-400 hover:underline"
-                                      >
+                                      <button onClick={() => handleDeleteAd(ad.id)} className="text-sm text-red-600 dark:text-red-400 hover:underline">
                                         Delete
                                       </button>
                                     </td>
@@ -3070,13 +2606,9 @@ const ConfigureGroupPage = () => {
         </div>
       </main>
 
-      {/* Footer */}
       <Footer />
-
-      {/* Sidebar Overlay */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Modals */}
       <SuccessModal
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
@@ -3086,7 +2618,6 @@ const ConfigureGroupPage = () => {
         autoCloseDelay={2000}
       />
 
-      {/* Role Assignment Confirmation Modal */}
       <ConfirmModal
         isOpen={showRoleConfirmModal}
         onClose={handleCancelRoleChange}

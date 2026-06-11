@@ -147,7 +147,7 @@ const HomePage = () => {
               <div className="flex items-center gap-4">
                 <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-700 relative flex-shrink-0">
                   <Image
-                    src="https://tr.rbxcdn.com/30DAY-AvatarHeadshot-903254C5702EE154B5EA564D1D4CB860-Png/150/150/AvatarHeadshot/Webp/noFilter"
+                    src={user?.avatar_url || `https://robohash.org/${user?.username || 'user'}?set=set3`}
                     alt={user?.username || "User"}
                     fill
                     className="object-cover"

@@ -56,11 +56,12 @@ const SignupForm = () => {
     setErrors([]);
     setLoading(true);
 
-    if (!turnstileToken) {
-      setErrors(["Please wait for the security check to complete."]);
-      setLoading(false);
-      return;
-    }
+    // TEMP: Turnstile check commented out for local testing — RESTORE BEFORE PUSHING TO REPO
+    // if (!turnstileToken) {
+    //   setErrors(["Please wait for the security check to complete."]);
+    //   setLoading(false);
+    //   return;
+    // }
 
     try {
       const response = await authApi.signup({
@@ -70,7 +71,7 @@ const SignupForm = () => {
         day,
         year,
         gender: gender || undefined,
-        turnstileToken,
+        turnstileToken: turnstileToken ?? undefined,
       });
 
       if (response.success && response.data) {

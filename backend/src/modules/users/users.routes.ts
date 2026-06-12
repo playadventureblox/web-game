@@ -10,8 +10,9 @@ import {
   getFollowers,
   getRelationship,
   updatePresence,
-} from './users.controller.js';
-import { verifyToken, optionalAuth } from '../../middleware/auth.middleware.js';
+  connectRoblox,
+  disconnectRoblox,
+} from './users.controller.js';import { verifyToken, optionalAuth } from '../../middleware/auth.middleware.js';
 
 const router = Router();
 
@@ -83,6 +84,8 @@ router.put("/presence", verifyToken, updatePresence);
  * @desc    Get user profile by username
  * @access  Public (with optional auth)
  */
+router.post("/roblox/connect", verifyToken, connectRoblox);
+router.delete("/roblox/disconnect", verifyToken, disconnectRoblox);
 router.get("/:username", optionalAuth, getUserByUsername);
 
 export default router;

@@ -349,7 +349,7 @@ const HomePage = () => {
                             💬 {post.comment_count || 0}
                           </span>
                         </div>
-                        {post.author_id === user?.id && (
+                        {(post.author_id === user?.id || user?.is_admin) && (
                           <button
                             onClick={() => handleDeletePost(post.id)}
                             className="text-xs text-red-500 hover:text-red-600 font-medium transition-colors"

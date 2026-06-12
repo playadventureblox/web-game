@@ -32,6 +32,10 @@ export const getProfile = async (req: Request, res: Response) => {
         u."isPlayer" as is_player,
         u."isStudio" as is_studio,
         u."isPremium" as is_premium,
+	u."isAdmin" as is_admin,
+	u.roblox_username,
+	u.roblox_id,
+	u.roblox_avatar_url,
         u."lastLogin" as last_login,
         u."createdAt" as created_at,
         u."lastOnline" as last_online,
@@ -852,4 +856,101 @@ export const updatePresence = async (req: Request, res: Response) => {
     console.error("Update presence error:", error);
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
+};
+
+/**
+ * @route   POST /api/v1/users/roblox/connect
+ * @desc    Connect Roblox account
+ * @access  Private
+ */
+export const connectRoblox = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const { robloxUsername } = req.body;
+
+    if (!robloxUsername?.trim()) {
+      return res.status(400).json({ success: false, message: "Roblox username is required" });
+    }
+
+    // Verify Roblox username exists via Roblox API
+    const robloxRes = await fetch(
+      `https://users.roblox.com/v1/usernames/users`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usernames: [robloxUsername.trim()], excludeBannedUsers: true }),
+      }
+    );
+
+    if (!robloxRes.ok) {
+      return res.status(502).json({ success: false, message: "Failed to verify Roblox account" });
+    }
+
+    const robloxData = await robloxRes.json() as any;
+    const robloxUser = robloxData.data?.[0];
+
+    if (!robloxUser) {
+      return res.status(404).json({ success: false, message: "Roblox account not found" });
+    }
+
+    // Get Roblox avatar
+    const avatarRes = await fetch(
+      `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${robloxUser.id}&size=150x150&format=Png`
+    );
+    let robloxAvatarUrl = null;
+    if (avatarRes.ok) {
+      const avatarData = await avatarRes.json() as any;
+      robloxAvatarUrl = avatarData.data?.[0]?.imageUrl || null;
+    }
+
+    // Save to database
+    await db.query(
+      `UPDATE users SET roblox_username = $1, roblox_id = $2, roblox_avatar_url = $3 WHERE id = $4`,
+      [robloxUser.name, String(robloxUser.id), robloxAvatarUrl, userId]
+    );
+
+    return res.json({
+      success: true,
+      message: "Roblox account connected successfully",
+      data: {
+        robloxUsername: robloxUser.name,
+        robloxId: String(robloxUser.id),
+        robloxAvatarUrl,
+      },
+    });
+  } catch (error) {
+    console.error("Connect Roblox error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+/**
+ * @route   DELETE /api/v1/users/roblox/disconnect
+ * @desc    Disconnect Roblox account
+ * @access  Private
+ */
+export const disconnectRoblox = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    await db.query(
+      `UPDATE users SET roblox_username = NULL, roblox_id = NULL, roblox_avatar_url = NULL WHERE id = $1`,
+      [userId]
+    );
+
+    return res.json({ success: true, message: "Roblox account disconnected successfully" });
+  } catch (error) {
+    console.error("Disconnect Roblox error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+
 };

@@ -1974,6 +1974,24 @@ export const catalogApi = {
       subcategories: Array<{ subcategory: string; itemCount: string }>;
     }>(`/catalog/subcategories/${encodeURIComponent(category)}`);
   },
+getUserInventory: async (params: {
+    category?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  } = {}) => {
+    const token = storage.getAccessToken();
+    if (!token) return { success: false, error: "No authentication token found" };
+    const queryParams = new URLSearchParams();
+    if (params.category && params.category !== "All") queryParams.append("category", params.category);
+    if (params.search) queryParams.append("search", params.search);
+    if (params.page) queryParams.append("page", params.page.toString());
+    if (params.limit) queryParams.append("limit", params.limit.toString());
+    return apiCall(`/catalog/inventory${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  },
 };
 
 // Feed API (Homepage wall)

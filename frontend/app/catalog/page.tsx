@@ -69,6 +69,13 @@ const CatalogPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+const [activeTab, setActiveTab] = useState<"platform" | "roblox">("platform");
+const [robloxItems, setRobloxItems] = useState<any[]>([]);
+const [robloxLoading, setRobloxLoading] = useState(false);
+const [robloxNextCursor, setRobloxNextCursor] = useState<string | null>(null);
+const [robloxPrevCursor, setRobloxPrevCursor] = useState<string | null>(null);
+const [robloxSearch, setRobloxSearch] = useState("");
+const [robloxSearchDebounce, setRobloxSearchDebounce] = useState("");
 
   // Fetch categories from API on mount
   useEffect(() => {
@@ -95,6 +102,41 @@ const CatalogPage = () => {
       setApiSubcategories([]);
     }
   }, [modalSelectedCategory]);
+
+// Debounce Roblox search
+useEffect(() => {
+  const timer = setTimeout(() => {
+    setRobloxSearchDebounce(robloxSearch);
+  }, 400);
+  return () => clearTimeout(timer);
+}, [robloxSearch]);
+
+// Fetch Roblox catalog
+const fetchRobloxItems = useCallback(async (cursor?: string) => {
+  setRobloxLoading(true);
+  try {
+    const response = await (catalogApi as any).searchRobloxCatalog({
+      keyword: robloxSearchDebounce || undefined,
+      limit: 30,
+      cursor: cursor || undefined,
+    });
+    if (response.success && response.data) {
+      setRobloxItems((response.data as any).items || []);
+      setRobloxNextCursor((response.data as any).nextPageCursor || null);
+      setRobloxPrevCursor((response.data as any).previousPageCursor || null);
+    }
+  } catch (error) {
+    console.error("Failed to fetch Roblox catalog:", error);
+  } finally {
+    setRobloxLoading(false);
+  }
+}, [robloxSearchDebounce]);
+
+useEffect(() => {
+  if (activeTab === "roblox") {
+    fetchRobloxItems();
+  }
+}, [activeTab, fetchRobloxItems]);
 
   // Debounce search input
   useEffect(() => {
@@ -306,9 +348,33 @@ const CatalogPage = () => {
             {/* Title + Search + Dropdown + Buy Button Row */}
             <div className="flex items-center justify-between gap-3 mb-3">
               {/* Left Side: Title */}
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap">
-                Catalog
-              </h1>
+              <div className="flex items-center gap-4">
+  <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+    Catalog
+  </h1>
+  <div className="flex border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+    <button
+      onClick={() => setActiveTab("platform")}
+      className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+        activeTab === "platform"
+          ? "bg-blue-600 text-white"
+          : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+      }`}
+    >
+      AdventureBlox
+    </button>
+    <button
+      onClick={() => setActiveTab("roblox")}
+      className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+        activeTab === "roblox"
+          ? "bg-blue-600 text-white"
+          : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+      }`}
+    >
+      Roblox Catalog
+    </button>
+  </div>
+</div>
 
               {/* Right Side: Search + Dropdown + Buy Button + Cart */}
               <div className="flex items-center gap-2 flex-1 justify-end">
@@ -339,7 +405,7 @@ const CatalogPage = () => {
             </div>
 
             {/* Filter Buttons Row */}
-            <div className="flex items-center gap-2 flex-wrap">
+            {activeTab === "platform" && <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={openCategoryModal}
                 className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 ${
@@ -353,48 +419,29 @@ const CatalogPage = () => {
                   <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
               </button>
-
               <button
                 onClick={() => setShowSortModal(true)}
                 className="px-4 py-1.5 rounded-md text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors flex items-center gap-1.5"
               >
                 Sort by {sortBy}
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                    clipRule="evenodd"
-                  />
+                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
               </button>
-
               <button
                 onClick={() => setShowUnavailableModal(true)}
                 className="px-4 py-1.5 rounded-md text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors flex items-center gap-1.5"
               >
                 {unavailableItemsFilter}
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                    clipRule="evenodd"
-                  />
+                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
               </button>
-            </div>
+            </div>}
           </div>
         </div>
-
         {/* Popular Tags */}
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+        {activeTab === "platform" && <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
           <div className="flex items-center gap-2">
             {/* Left Arrow */}
             <button
@@ -481,57 +528,135 @@ const CatalogPage = () => {
             </button>
           </div>
         </div>
-
+	}
         {/* Catalog Items Grid */}
-        <div className="px-4 py-6">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-3" />
-              <p className="text-gray-500 dark:text-gray-400 text-sm">Loading catalog...</p>
+<div className="px-4 py-6">
+  {activeTab === "platform" ? (
+    <>
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-3" />
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Loading catalog...</p>
+        </div>
+      ) : catalogItems.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20">
+          <span className="text-5xl mb-4">🔍</span>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">No items found</h3>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Try adjusting your filters or search query</p>
+        </div>
+      ) : (
+        <>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+            Showing {catalogItems.length} of {totalItems} items
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {catalogItems.map((item) => (
+              <CatalogItemCard key={item.id} item={item} />
+            ))}
+          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-8 pb-8">
+              <button
+                onClick={() => fetchItems(currentPage - 1)}
+                disabled={currentPage <= 1}
+                className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 font-medium rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-gray-600 dark:text-gray-400 px-3">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={() => fetchItems(currentPage + 1)}
+                disabled={currentPage >= totalPages}
+                className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 font-medium rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
             </div>
-          ) : catalogItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20">
-              <span className="text-5xl mb-4">🔍</span>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">No items found</h3>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">Try adjusting your filters or search query</p>
-            </div>
-          ) : (
-            <>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                Showing {catalogItems.length} of {totalItems} items
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                {catalogItems.map((item) => (
-                  <CatalogItemCard key={item.id} item={item} />
-                ))}
-              </div>
+          )}
+        </>
+      )}
+    </>
+  ) : (
+    <>
+      {/* Roblox Search Bar */}
+      <div className="mb-4 relative max-w-md">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+        <input
+          type="text"
+          placeholder="Search Roblox catalog..."
+          value={robloxSearch}
+          onChange={(e) => setRobloxSearch(e.target.value)}
+          className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded pl-8 pr-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+      </div>
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 mt-8 pb-8">
-                  <button
-                    onClick={() => fetchItems(currentPage - 1)}
-                    disabled={currentPage <= 1}
-                    className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 font-medium rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Previous
-                  </button>
-                  <span className="text-sm text-gray-600 dark:text-gray-400 px-3">
-                    Page {currentPage} of {totalPages}
-                  </span>
-                  <button
-                    onClick={() => fetchItems(currentPage + 1)}
-                    disabled={currentPage >= totalPages}
-                    className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 font-medium rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
-            </>
+      {robloxLoading ? (
+        <div className="flex flex-col items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-3" />
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Loading Roblox catalog...</p>
+        </div>
+      ) : robloxItems.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20">
+          <span className="text-5xl mb-4">🔍</span>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">No items found</h3>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Try a different search term</p>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+  {robloxItems.map((item) => (
+    <a key={item.id} href={`https://www.roblox.com/catalog/${item.robloxAssetId}`} target="_blank" rel="noopener noreferrer" className="block group">
+      <div className="rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+        <div className="relative aspect-square bg-gray-100 dark:bg-gray-700">
+          {item.thumbnailUrl ? (
+            <img
+              src={item.thumbnailUrl}
+              alt={item.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-400">
+              <span className="text-4xl">🎭</span>
+            </div>
           )}
         </div>
-      </main>
+        <div className="pt-2">
+          <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-1 line-clamp-2">
+            {item.name}
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {item.priceStatus === "Free" ? "Free" : item.price ? `◈ ${item.price}` : "Free"}
+          </p>
+        </div>
+      </div>
+    </a>
+))}
+</div>
+          {/* Pagination */}
+          <div className="flex items-center justify-center gap-2 mt-8 pb-8">
+            <button
+              onClick={() => fetchRobloxItems(robloxPrevCursor || undefined)}
+              disabled={!robloxPrevCursor}
+              className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 font-medium rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => fetchRobloxItems(robloxNextCursor || undefined)}
+              disabled={!robloxNextCursor}
+              className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 font-medium rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </>
+      )}
+    </>
+  )}
+</div>
+                </main>
 
       {/* Category Modal — two-level: category then subcategory */}
       {showCategoryModal && (

@@ -1992,6 +1992,21 @@ getUserInventory: async (params: {
       headers: { Authorization: `Bearer ${token}` },
     });
   },
+searchRobloxCatalog: async (params: {
+    keyword?: string;
+    category?: string;
+    limit?: number;
+    cursor?: string;
+  } = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.keyword) queryParams.append("keyword", params.keyword);
+    if (params.category) queryParams.append("category", params.category);
+    if (params.limit) queryParams.append("limit", params.limit.toString());
+    if (params.cursor) queryParams.append("cursor", params.cursor);
+    return apiCall(`/catalog/roblox/search?${queryParams.toString()}`, {
+      method: "GET",
+    });
+  },
 };
 
 // Feed API (Homepage wall)

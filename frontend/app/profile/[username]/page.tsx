@@ -803,6 +803,9 @@ return (
                             <div>
                               <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1 line-clamp-2">{groups[currentGroupIndex]?.name}</h3>
                               <div className="w-full h-px bg-gray-200 dark:bg-gray-700 my-3" />
+                              {groups[currentGroupIndex]?.description && (
+                                <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3">{groups[currentGroupIndex]?.description}</p>
+                              )}
                             </div>
                             <div className="flex gap-10">
                               <div>

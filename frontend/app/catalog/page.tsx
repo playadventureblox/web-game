@@ -607,7 +607,11 @@ useEffect(() => {
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
   {robloxItems.map((item) => (
-    <a key={item.id} href={`https://www.roblox.com/catalog/${item.robloxAssetId}`} target="_blank" rel="noopener noreferrer" className="block group">
+    <div key={item.id} className="block group cursor-pointer" onClick={async () => {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'}/catalog/roblox/import/${item.robloxAssetId}`, { method: 'POST' });
+  const data = await res.json();
+  if (data.success) window.location.href = `/catalog/${data.data.id}`;
+}}>
       <div className="rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
         <div className="relative aspect-square bg-gray-100 dark:bg-gray-700">
           {item.thumbnailUrl ? (
@@ -631,7 +635,7 @@ useEffect(() => {
           </p>
         </div>
       </div>
-    </a>
+    </div>
 ))}
 </div>
           {/* Pagination */}

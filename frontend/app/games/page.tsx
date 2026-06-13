@@ -13,6 +13,8 @@ interface Game {
   visits: number;
   favorites: number;
   currentPlayers: number;
+  is_sponsored?: boolean;
+  sponsor_bid?: number;
   createdAt: string;
 }
 
@@ -20,14 +22,16 @@ const GamesPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [games, setGames] = useState<Game[]>([]);
+  const [sponsoredGames, setSponsoredGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+
   const fetchGames = async (page = 1, search = "") => {
     setLoading(true);
     try {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
       const params = new URLSearchParams({ page: String(page), limit: "20" });
       if (search) params.append("search", search);
       const res = await fetch(`${API_BASE_URL}/games?${params}`);
@@ -44,9 +48,57 @@ const GamesPage = () => {
     }
   };
 
+  const fetchSponsoredGames = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/games/sponsored`);
+      const data = await res.json();
+      if (data.success) {
+        setSponsoredGames(data.data.games || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch sponsored games:", error);
+    }
+  };
+
   useEffect(() => {
     fetchGames();
+    fetchSponsoredGames();
   }, []);
+
+  const GameCard = ({ game, isSponsored = false }: { game: Game; isSponsored?: boolean }) => (
+    <div className="group cursor-pointer">
+      <div className="rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 aspect-video mb-2 relative">
+        {game.thumbnailUrl ? (
+          <img
+            src={game.thumbnailUrl}
+            alt={game.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-gray-400">
+            <span>No Image</span>
+          </div>
+        )}
+        {isSponsored && (
+          <div className="absolute top-2 left-2 bg-yellow-500 text-white text-xs font-bold px-2 py-0.5 rounded">
+            Sponsored
+          </div>
+        )}
+      </div>
+      <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 line-clamp-1">
+        {game.title}
+      </h3>
+      <p className="text-xs text-gray-500">
+        {game.visits?.toLocaleString() || 0} visits
+      </p>
+      <a
+        href={`roblox://experiences/start?placeId=${game.id}`}
+        className="mt-2 block text-center bg-green-500 hover:bg-green-600 text-white text-xs font-semibold py-1.5 rounded transition-colors"
+      >
+        Play
+      </a>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -60,6 +112,21 @@ const GamesPage = () => {
         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6">
           Games
         </h1>
+
+        {/* Sponsored Games Section */}
+        {sponsoredGames.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              <span className="text-yellow-500">★</span> Sponsored Games
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              {sponsoredGames.map((game) => (
+                <GameCard key={game.id} game={game} isSponsored={true} />
+              ))}
+            </div>
+            <div className="border-b border-gray-200 dark:border-gray-700 mt-6" />
+          </section>
+        )}
 
         {loading ? (
           <div className="flex justify-center py-20">
@@ -81,36 +148,10 @@ const GamesPage = () => {
           </div>
         ) : (
           <div>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">All Games</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {games.map((game) => (
-                <div key={game.id} className="group cursor-pointer">
-                  <div className="rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 aspect-video mb-2">
-                    {game.thumbnailUrl ? (
-                      <img
-                        src={game.thumbnailUrl}
-                        alt={game.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        <span>No Image</span>
-                      </div>
-                    )}
-                  </div>
-                  <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 line-clamp-1">
-                    {game.title}
-                  </h3>
-                  <p className="text-xs text-gray-500">
-                    {game.visits?.toLocaleString() || 0} visits
-                  </p>
-
-                  <a
-                    href={`roblox://experiences/start?placeId=${game.id}`}
-                    className="mt-2 block text-center bg-green-500 hover:bg-green-600 text-white text-xs font-semibold py-1.5 rounded transition-colors"
-                  >
-                    Play
-                  </a>
-                </div>
+                <GameCard key={game.id} game={game} isSponsored={game.is_sponsored} />
               ))}
             </div>
 

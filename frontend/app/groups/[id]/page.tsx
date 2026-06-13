@@ -1607,12 +1607,6 @@ const GroupDetailPage = () => {
                               </p>
                             )}
                             <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                              <span>
-                                📅 {startDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} at {startDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}
-                              </span>
-                              <span>
-                                → {endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} at {endDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}
-                              </span>
                               {event.location && <span>📍 {event.location}</span>}
                             </div>
                             {event.created_by_username && (

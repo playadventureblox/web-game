@@ -123,13 +123,17 @@ const AvatarPage = () => {
     fetchItems(activeSubTab, 1);
   }, [activeSubTab, fetchItems]);
 
-  const toggleEquip = (itemId: string) => {
+ const toggleEquip = async (itemId: string) => {
     setEquippedItems(prev => {
       const next = new Set(prev);
       if (next.has(itemId)) {
         next.delete(itemId);
       } else {
         next.add(itemId);
+        // Save to inventory when equipping
+        (catalogApi as any).addToInventory(itemId).catch((err: any) => {
+          console.error("Failed to add to inventory:", err);
+        });
       }
       return next;
     });

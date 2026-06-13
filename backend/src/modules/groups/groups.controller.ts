@@ -756,10 +756,10 @@ export const joinGroup = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Get the default Member role for this group
+    // Get the lowest rank role (Rank 1) for this group
     const memberRoleResult = await db.query(
-      'SELECT id FROM group_roles WHERE "groupId" = $1 AND name = $2',
-      [groupId, 'Member'],
+      `SELECT id FROM group_roles WHERE "groupId" = $1 AND name != 'Owner' ORDER BY rank ASC LIMIT 1`,
+      [groupId],
     );
 
     const memberRoleId = memberRoleResult.rows.length > 0 
@@ -953,10 +953,10 @@ export const acceptJoinRequest = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Get the default Member role
+    // Get the lowest rank role (Rank 1) for this group
     const memberRoleResult = await db.query(
-      'SELECT id FROM group_roles WHERE "groupId" = $1 AND name = $2',
-      [groupId, 'Member'],
+      `SELECT id FROM group_roles WHERE "groupId" = $1 AND name != 'Owner' ORDER BY rank ASC LIMIT 1`,
+      [groupId],
     );
 
     const memberRoleId = memberRoleResult.rows.length > 0 

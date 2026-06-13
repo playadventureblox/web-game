@@ -42,6 +42,9 @@ export const getGames = async (req: Request, res: Response) => {
       case "favorites":
         orderClause = 'ORDER BY favorites DESC';
         break;
+      case "sponsored":
+        orderClause = 'ORDER BY is_sponsored DESC, sponsor_bid DESC, "createdAt" DESC';
+        break;
     }
 
     const countQuery = `SELECT COUNT(*) FROM games ${whereClause}`;
@@ -52,7 +55,8 @@ export const getGames = async (req: Request, res: Response) => {
       SELECT id, title, description, "thumbnailUrl", "iconUrl",
              "creatorId", "groupId", genre, tags, "ageRating",
              "maxPlayers", "isPublished", visits, likes, favorites,
-             "currentPlayers", "createdAt", "updatedAt"
+             "currentPlayers", is_sponsored, sponsored_until, sponsor_bid,
+             "createdAt", "updatedAt"
       FROM games
       ${whereClause}
       ${orderClause}
@@ -83,6 +87,116 @@ export const getGames = async (req: Request, res: Response) => {
   }
 };
 
+// GET /api/v1/games/sponsored
+export const getSponsoredGames = async (_req: Request, res: Response) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, title, description, "thumbnailUrl", "iconUrl",
+              "creatorId", visits, favorites, "currentPlayers",
+              is_sponsored, sponsored_until, sponsor_bid
+       FROM games
+       WHERE "isPublished" = true
+       AND is_sponsored = true
+       AND (sponsored_until IS NULL OR sponsored_until > NOW())
+       ORDER BY sponsor_bid DESC
+       LIMIT 6`
+    );
+
+    res.json({
+      success: true,
+      data: { games: result.rows },
+    });
+  } catch (error) {
+    console.error("Error fetching sponsored games:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch sponsored games",
+    });
+  }
+};
+
+// POST /api/v1/games/:id/sponsor
+export const sponsorGame = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { bid, days = 7 } = req.body;
+    const userId = (req as any).userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    if (!bid || bid < 1) {
+      return res.status(400).json({ success: false, message: "Bid amount is required" });
+    }
+
+    const gameCheck = await pool.query(
+      `SELECT id, "creatorId" FROM games WHERE id = $1 AND "isPublished" = true`,
+      [id]
+    );
+
+    if (gameCheck.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Game not found" });
+    }
+
+    if (gameCheck.rows[0].creatorId !== userId) {
+      return res.status(403).json({ success: false, message: "You can only sponsor your own games" });
+    }
+
+    const sponsoredUntil = new Date();
+    sponsoredUntil.setDate(sponsoredUntil.getDate() + parseInt(days));
+
+    await pool.query(
+      `UPDATE games SET is_sponsored = true, sponsor_bid = $1, sponsored_until = $2, "updatedAt" = NOW() WHERE id = $3`,
+      [bid, sponsoredUntil, id]
+    );
+
+    return res.json({
+      success: true,
+      message: "Game sponsored successfully",
+      data: { sponsoredUntil },
+    });
+  } catch (error) {
+    console.error("Error sponsoring game:", error);
+    return res.status(500).json({ success: false, message: "Failed to sponsor game" });
+  }
+};
+
+// DELETE /api/v1/games/:id/sponsor
+export const unsponsorGame = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const gameCheck = await pool.query(
+      `SELECT id, "creatorId" FROM games WHERE id = $1`,
+      [id]
+    );
+
+    if (gameCheck.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Game not found" });
+    }
+
+    if (gameCheck.rows[0].creatorId !== userId) {
+      return res.status(403).json({ success: false, message: "You can only unsponsor your own games" });
+    }
+
+    await pool.query(
+      `UPDATE games SET is_sponsored = false, sponsor_bid = 0, sponsored_until = NULL, "updatedAt" = NOW() WHERE id = $1`,
+      [id]
+    );
+
+    return res.json({ success: true, message: "Game unsponsored successfully" });
+  } catch (error) {
+    console.error("Error unsponsoring game:", error);
+    return res.status(500).json({ success: false, message: "Failed to unsponsor game" });
+  }
+};
+
 // GET /api/v1/games/:id
 export const getGameById = async (req: Request, res: Response) => {
   try {
@@ -92,7 +206,8 @@ export const getGameById = async (req: Request, res: Response) => {
       `SELECT id, title, description, "thumbnailUrl", "iconUrl",
               "creatorId", "groupId", genre, tags, "ageRating",
               "maxPlayers", "isPublished", visits, likes, favorites,
-              "currentPlayers", "createdAt", "updatedAt"
+              "currentPlayers", is_sponsored, sponsored_until, sponsor_bid,
+              "createdAt", "updatedAt"
        FROM games WHERE id = $1 AND "isPublished" = true`,
       [id]
     );

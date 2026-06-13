@@ -557,20 +557,196 @@ const handleDisconnectRoblox = async () => {
               </div>
             )}
 
-            {activeSection !== "account-info" && (
+            {activeSection === "security" && (
               <div className="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                  {settingsSections.find((s) => s.id === activeSection)?.label}
-                </h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Settings content for this section will be added here.
-                </p>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6">Security</h2>
+                <div className="space-y-6">
+                  <div className="pb-6 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Password</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Change your account password</p>
+                    <button className="px-4 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-semibold rounded text-sm hover:bg-gray-800 dark:hover:bg-gray-200">Change Password</button>
+                  </div>
+                  <div className="pb-6 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Two-Factor Authentication</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Add an extra layer of security to your account</p>
+                    <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded text-sm">Enable 2FA</button>
+                  </div>
+                  <div className="pb-6 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Login History</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">View recent login activity on your account</p>
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded p-3 text-xs text-gray-600 dark:text-gray-300">No recent login activity found.</div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-1">Delete Account</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Permanently delete your AdventureBlox account and all associated data</p>
+                    <button className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded text-sm">Delete Account</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeSection === "privacy" && (
+              <div className="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6">Privacy & Content Restrictions</h2>
+                <div className="space-y-6">
+                  <div className="pb-6 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Who can message me</h3>
+                    <div className="space-y-2">
+                      {["Everyone", "Friends only", "No one"].map((opt) => (
+                        <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                          <input type="radio" name="message_privacy" defaultChecked={opt === "Friends only"} className="w-4 h-4" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{opt}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="pb-6 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Who can follow me</h3>
+                    <div className="space-y-2">
+                      {["Everyone", "Friends only", "No one"].map((opt) => (
+                        <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                          <input type="radio" name="follow_privacy" defaultChecked={opt === "Everyone"} className="w-4 h-4" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{opt}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="pb-6 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Who can see my inventory</h3>
+                    <div className="space-y-2">
+                      {["Everyone", "Friends only", "No one"].map((opt) => (
+                        <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                          <input type="radio" name="inventory_privacy" defaultChecked={opt === "Everyone"} className="w-4 h-4" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{opt}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Content restrictions</h3>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input type="checkbox" className="w-4 h-4" />
+                      <div>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">Filter mature content</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Hide games and items marked as mature</p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeSection === "notifications" && (
+              <div className="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6">Notifications</h2>
+                <div className="space-y-4">
+                  {[
+                    { label: "Friend requests", desc: "When someone sends you a friend request" },
+                    { label: "Friend request accepted", desc: "When someone accepts your friend request" },
+                    { label: "Group invites", desc: "When someone invites you to a group" },
+                    { label: "Group wall posts", desc: "When someone posts on your group wall" },
+                    { label: "Private messages", desc: "When someone sends you a message" },
+                    { label: "AdventureBux received", desc: "When you receive AdventureBux" },
+                    { label: "Game updates", desc: "Updates from games you follow" },
+                    { label: "Platform announcements", desc: "Important announcements from AdventureBlox" },
+                  ].map((item) => (
+                    <div key={item.label} className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.label}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{item.desc}</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" defaultChecked className="sr-only peer" />
+                        <div className="w-10 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeSection === "membership" && (
+              <div className="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6">Membership</h2>
+                <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg p-6 text-white mb-6">
+                  <h3 className="text-lg font-bold mb-1">AdventureBlox Free</h3>
+                  <p className="text-sm text-white/80">Your current plan</p>
+                </div>
+                <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 mb-4">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="font-bold text-gray-900 dark:text-gray-100">AdventureBlox Premium</h3>
+                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">$4.99<span className="text-sm font-normal text-gray-500">/month</span></p>
+                    </div>
+                    <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-semibold rounded">Recommended</span>
+                  </div>
+                  <ul className="space-y-2 mb-4">
+                    {["1,000 AdventureBux per month", "Up to 35% bonus on AdventureBux purchases", "Trade and resell avatar items", "Exclusive premium badge on profile", "Priority customer support"].map((perk) => (
+                      <li key={perk} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                        <span className="text-green-500">✓</span> {perk}
+                      </li>
+                    ))}
+                  </ul>
+                  <button className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-sm">Upgrade to Premium</button>
+                </div>
+              </div>
+            )}
+
+            {activeSection === "parental" && (
+              <div className="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6">Parental Controls</h2>
+                <div className="space-y-6">
+                  <div className="pb-6 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Account PIN</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Set a PIN to prevent changes to parental control settings</p>
+                    <button className="px-4 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-semibold rounded text-sm hover:bg-gray-800 dark:hover:bg-gray-200">Set PIN</button>
+                  </div>
+                  <div className="pb-6 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Chat restrictions</h3>
+                    <div className="space-y-2">
+                      {["All users", "Friends only", "No one"].map((opt) => (
+                        <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                          <input type="radio" name="chat_restriction" defaultChecked={opt === "Friends only"} className="w-4 h-4" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{opt}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="pb-6 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Spending limits</h3>
+                    <div className="space-y-2">
+                      {["No limit", "$5/month", "$10/month", "$25/month", "$50/month"].map((opt) => (
+                        <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                          <input type="radio" name="spending_limit" defaultChecked={opt === "No limit"} className="w-4 h-4" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{opt}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Content filters</h3>
+                    <div className="space-y-3">
+                      {[
+                        { label: "Safe chat mode", desc: "Only allow pre-approved messages" },
+                        { label: "Block external links", desc: "Prevent clicking links to external websites" },
+                        { label: "Hide user-generated content", desc: "Hide content created by other users" },
+                      ].map((item) => (
+                        <label key={item.label} className="flex items-start gap-3 cursor-pointer">
+                          <input type="checkbox" className="w-4 h-4 mt-0.5" />
+                          <div>
+                            <p className="text-sm text-gray-700 dark:text-gray-300">{item.label}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{item.desc}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
         </div>
       </main>
-
       <div className="mt-8">
         <Footer />
       </div>
